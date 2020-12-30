@@ -1,8 +1,6 @@
-// use clap::{App, Arg, SubCommand};
 use std::process;
 use structopt::StructOpt;
 use std::env;
-
 
 #[derive(StructOpt, Debug)]
 #[structopt(version = env!("CARGO_PKG_VERSION"))]
@@ -31,7 +29,6 @@ pub enum Command {
 }
 
 fn main() {
-    argv = env::args().nth(1).ok_or("Please give at least one argument".to_owned()).and_then()
     let cli = Cli::from_args();
     match cli.cmd {
         None => process::exit(1),
