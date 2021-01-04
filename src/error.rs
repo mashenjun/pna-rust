@@ -3,8 +3,8 @@ use std::io;
 /// My Error Type
 #[derive(Debug)]
 pub enum KvsError {
-    /// MockError is for test usage
-    MockError,
+    /// KeyNotFoundError is for test usage
+    KeyNotFoundError,
     IOError( io::Error),
     SerdeJsonError( serde_json::Error)
 }

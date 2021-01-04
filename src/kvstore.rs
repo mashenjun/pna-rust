@@ -1,6 +1,6 @@
 //! # KvStore Crate
 
-pub use crate::error::{KvsError, Result};
+pub use crate::{KvsError, Result};
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -56,12 +56,11 @@ impl KvStore {
             db: data // an in memory hash map
         })
     }
-
     /// set use internal HashMap to set data
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         // TODO:prototype
         //      open the file defined by `path`, append string into file and close it;
-        //      insert key value to in hash map
+        //      insert key value to in hash mapKeyNotFoundError
         //      no need to build a command again
         let cmd = Command::Set { key, value };
         let mut file = OpenOptions::new().append(true).create(true).open(&self.path)?;
@@ -81,7 +80,16 @@ impl KvStore {
 
     /// remove call internal HashMap remove api to remove data
     pub fn remove(&mut self, key: String) -> Result<()> {
-        self.db.remove(&key).map(|_| ()).ok_or(KvsError::MockError)
+        match self.db.remove(&key) {
+            Some(_) => {
+                let cmd = Command::Remove { key };
+                let mut file = OpenOptions::new().append(true).create(true).open(&self.path)?;
+                serde_json::to_writer(&mut file, &cmd)?;
+                file.flush()?;
+                Ok(())
+            },
+            None => Err(KvsError::KeyNotFoundError)
+        }
     }
 }
 

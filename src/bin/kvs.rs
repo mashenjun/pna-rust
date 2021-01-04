@@ -1,4 +1,4 @@
-use kvs::{Command, KvStore, Result};
+use kvs::{Command, KvStore, Result, KvsError};
 use std::process;
 use structopt::StructOpt;
 use std::env::current_dir;
@@ -17,9 +17,12 @@ fn main() -> Result<()>{
     match run(&cli.cmd) {
         Err(err) => {
             eprintln!("run cmd {:?} err: {:?}", &cli.cmd, err);
+            if let KvsError::KeyNotFoundError = err {
+                println!("Key not found");
+            }
             process::exit(1);
         }
-        Ok(_) => Ok(())
+        _ => Ok(())
     }
 }
 
@@ -37,9 +40,10 @@ fn run(cmd :&Option<Command>) -> Result<()> {
                 }else {
                     println!("Key not found");
                 }
+
             }
-            Command::Remove{key:_} => {
-                unimplemented!("rm");
+            Command::Remove{key:k} => {
+                store.remove(k.to_string())?;
             }
         }
     }
