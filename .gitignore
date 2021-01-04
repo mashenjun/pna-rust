@@ -17,3 +17,4 @@ Cargo.lock
 
 # User-specific stuff
 .idea/
+.vscode/
