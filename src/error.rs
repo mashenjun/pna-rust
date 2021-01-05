@@ -5,6 +5,7 @@ use std::io;
 pub enum KvsError {
     /// KeyNotFoundError is for test usage
     KeyNotFoundError,
+    InvalidCommandError,
     IOError( io::Error),
     SerdeJsonError( serde_json::Error)
 }
