@@ -2,55 +2,66 @@
 
 pub use crate::{KvsError, Result};
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::fs::OpenOptions;
-use std::io::{Write, Seek, SeekFrom, Read};
 use serde::{Deserialize, Serialize};
-use structopt::StructOpt;
+use std::borrow::BorrowMut;
+use std::collections::HashMap;
 use std::fs;
+use std::fs::{File, OpenOptions};
+use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::path::PathBuf;
+use structopt::StructOpt;
 
+const COMPACT_THRESHOLD_BYTES: u64 = 1024 * 1024;
 
 /// KvStore store data in memory
 pub struct KvStore {
     path: PathBuf,
-    // use to store the index position and length to key
+    // index stores key to the position in file and length.
     index: HashMap<String, Meta>,
     cursor: u64,
-    // db: HashMap<String, String>,
+    dangling_bytes: u64,
+    file: File,
 }
 
 #[allow(clippy::new_without_default)]
 impl KvStore {
     /// open read a file with the given path
-    pub fn open(path: impl Into<PathBuf>)-> Result<KvStore>{
-        let path = path.into();
+    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
+        let path: PathBuf = path.into();
         fs::create_dir_all(&path)?;
-        let db_path = path.join("db");
-        let mut index :HashMap<String, Meta> = HashMap::new();
-        let mut file = OpenOptions::new().read(true).create(true).write(true).open(&db_path)?;
-        let mut cursor = file.seek(SeekFrom::Start(0))?;
-        let decoder = serde_json::Deserializer::from_reader(file);
+        let mut index: HashMap<String, Meta> = HashMap::new();
+        let mut file: File = OpenOptions::new()
+            .read(true)
+            .create(true)
+            .write(true)
+            .open(&data_path(&path))?;
+        let mut cursor: u64 = file.seek(SeekFrom::Start(0))?;
+        let decoder = serde_json::Deserializer::from_reader(&mut file);
         let mut iterator = decoder.into_iter::<Command>();
+        let mut dangling_bytes: u64 = 0;
         // TODO: can use better op than match
         while let Some(cmd) = iterator.next() {
             let new_cursor = iterator.byte_offset() as u64;
             match cmd? {
-                Command::Set{key, ..} => {
-                    index.insert(key, Meta(cursor, new_cursor as u64 - cursor));
-                },
-                Command::Remove{key} => {
+                Command::Set { key, .. } => {
+                    if let Some(meta) = index.insert(key, Meta(cursor, new_cursor as u64 - cursor))
+                    {
+                        dangling_bytes += meta.1
+                    }
+                }
+                Command::Remove { key } => {
                     index.remove(&key);
-                },
+                }
                 _ => (),
             }
             cursor = new_cursor as u64;
         }
         Ok(KvStore {
-            // path : path.join("db"),
-            path: db_path,
+            path,
             index,
-            cursor, // TODO: use real cursor value
+            cursor,
+            dangling_bytes,
+            file,
         })
     }
     /// set write the given key value into log file and update the index map.
@@ -60,16 +71,25 @@ impl KvStore {
         //       insert key value to in hash mapKeyNotFoundError
         //       no need to build a command again
         let cmd = Command::Set { key, value };
-        let mut file = OpenOptions::new().append(true).create(true).open(&self.path)?;
+        // let mut file = OpenOptions::new()
+        //     .append(true)
+        //     .create(true)
+        //     .open(&self.path)?;
         let vec = serde_json::to_vec(&cmd)?;
         let buf = vec.as_ref();
-        file.write(buf)?;
+        self.file.write(buf)?;
         // update the cursor
-        file.flush()?;
-        if let Command::Set { key, ..} = cmd {
-            self.index.insert(key, Meta(self.cursor as u64, buf.len() as u64));
+        self.file.flush()?;
+        if let Command::Set { key, .. } = cmd {
+            if let Some(meta) = self
+                .index
+                .insert(key, Meta(self.cursor as u64, buf.len() as u64))
+            {
+                self.dangling_bytes += meta.1;
+            }
         };
         self.cursor += buf.len() as u64;
+        self.compact()?;
         Ok(())
     }
 
@@ -77,14 +97,13 @@ impl KvStore {
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
         if let Some(meta) = self.index.get(&key) {
             // fetch kv form disk using the meta
-            let mut file = OpenOptions::new().read(true).create(true).write(true).open(&self.path)?;
-            file.seek(SeekFrom::Start(meta.0))?;
-            let cmd_reader = file.take(meta.1);
+            self.file.seek(SeekFrom::Start(meta.0))?;
+            let cmd_reader = self.file.borrow_mut().take(meta.1);
             return if let Command::Set { value, .. } = serde_json::from_reader(cmd_reader)? {
                 Ok(Some(value))
             } else {
                 Err(KvsError::InvalidCommandError)
-            }
+            };
         }
         Ok(None)
     }
@@ -92,34 +111,69 @@ impl KvStore {
     /// remove call internal HashMap remove api to remove data
     pub fn remove(&mut self, key: String) -> Result<()> {
         match self.index.remove(&key) {
-            Some(_) => {
+            Some(meta) => {
                 let cmd = Command::Remove { key };
-                let mut file = OpenOptions::new().append(true).create(true).open(&self.path)?;
-                serde_json::to_writer(&mut file, &cmd)?;
-                file.flush()?;
+                // let mut file = OpenOptions::new()
+                //     .append(true)
+                //     .create(true)
+                //     .open(&self.path)?;
+                serde_json::to_writer(&mut self.file, &cmd)?;
+                self.file.flush()?;
+                self.dangling_bytes += meta.1;
                 Ok(())
-            },
-            None => Err(KvsError::KeyNotFoundError)
+            }
+            None => Err(KvsError::KeyNotFoundError),
         }
     }
+
+    fn compact(&mut self) -> Result<()> {
+        if self.dangling_bytes <= COMPACT_THRESHOLD_BYTES {
+            return Ok(());
+        }
+        println!("start compact with bytes {}", self.dangling_bytes);
+        // do real compaction
+        let compact_path = compact_path(&self.path);
+        let mut compact_file: File = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&compact_path)?;
+
+        compact_file.seek(SeekFrom::Start(0))?;
+        let mut cursor = 0;
+        for meta in self.index.values_mut() {
+            self.file.seek(SeekFrom::Start(meta.0))?;
+            let mut cmd_reader = self.file.borrow_mut().take(meta.1);
+            let l = io::copy(&mut cmd_reader, compact_file.borrow_mut())?;
+            *meta = Meta(cursor, l);
+            cursor += l;
+        }
+        compact_file.flush()?;
+        self.file = compact_file;
+        let data_path = data_path(&self.path);
+        fs::remove_file(&data_path)?;
+        fs::rename(compact_path, data_path)?;
+        self.dangling_bytes = 0;
+        Ok(())
+    }
+}
+
+fn data_path(path: &PathBuf) -> PathBuf {
+    path.join("data")
+}
+
+fn compact_path(path: &PathBuf) -> PathBuf {
+    path.join("data.compact")
 }
 
 /// Command defines command
 #[derive(StructOpt, Debug, Serialize, Deserialize)]
 pub enum Command {
     #[structopt(name = "get")]
-    Get {
-        key: String,
-    },
+    Get { key: String },
     #[structopt(name = "set")]
-    Set {
-        key: String,
-        value: String,
-    },
+    Set { key: String, value: String },
     #[structopt(name = "rm")]
-    Remove {
-        key: String,
-    },
+    Remove { key: String },
 }
 
 // Meta store position and length for a Set Command

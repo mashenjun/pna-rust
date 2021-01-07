@@ -6,8 +6,8 @@ pub enum KvsError {
     /// KeyNotFoundError is for test usage
     KeyNotFoundError,
     InvalidCommandError,
-    IOError( io::Error),
-    SerdeJsonError( serde_json::Error)
+    IOError(io::Error),
+    SerdeJsonError(serde_json::Error),
 }
 
 impl From<io::Error> for KvsError {
