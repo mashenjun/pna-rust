@@ -1,3 +1,4 @@
+use std::fmt::{self, Display};
 use std::io;
 
 /// My Error Type
@@ -19,6 +20,25 @@ impl From<io::Error> for KvsError {
 impl From<serde_json::Error> for KvsError {
     fn from(err: serde_json::Error) -> KvsError {
         KvsError::SerdeJsonError(err)
+    }
+}
+
+impl Display for KvsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            KvsError::IOError(e) => {
+                write!(f, "Io error: {}", e)
+            }
+            KvsError::InvalidCommandError => {
+                write!(f, "Invalid command")
+            }
+            KvsError::KeyNotFoundError => {
+                write!(f, "Key not found")
+            }
+            KvsError::SerdeJsonError(e) => {
+                write!(f, "Serde json error: {}", e)
+            }
+        }
     }
 }
 
