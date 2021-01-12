@@ -5,6 +5,7 @@ pub use crate::{KvsError, Result};
 use serde::{Deserialize, Serialize};
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
+use std::fmt::{self, Display};
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -174,6 +175,23 @@ pub enum Command {
     Set { key: String, value: String },
     #[structopt(name = "rm")]
     Remove { key: String },
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Command::Get { key } => {
+                write!(f, "get {}", key)?;
+            }
+            Command::Set { key, value } => {
+                write!(f, "set {}:{}", key, value)?;
+            }
+            Command::Remove { key } => {
+                write!(f, "rm {}", key)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 // Meta store position and length for a Set Command

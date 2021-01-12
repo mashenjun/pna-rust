@@ -3,11 +3,9 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
-use env_logger::{Builder, Target};
+use env_logger::Target;
 use kvs::*;
 use std::env::current_dir;
-use std::error::Error;
-use std::fs;
 use std::fs::OpenOptions;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -46,7 +44,8 @@ struct Server {
 
 impl Server {
     fn validate(&mut self) {
-        match (self.engine, check_old_engine()) {
+        let old_engine = check_old_engine().unwrap();
+        match (self.engine, old_engine) {
             (None, old) => self.engine = old,
             (Some(curr), Some(old)) => {
                 if curr != old {
@@ -71,21 +70,28 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(KVS_ENGINE_FILE)?;
-            todo!()
+            // TODO
+            let storage = KvsServer::new(KvStorage::new());
+            return storage.run(srv.addr);
         }
         EngineOpt::sled => {
             OpenOptions::new()
                 .write(true)
                 .create(true)
                 .open(SLED_ENGINE_FILE)?;
-            todo!()
+            // TODO
+            let storage = KvsServer::new(KvStorage::new());
+            return storage.run(srv.addr);
         }
     }
     Ok(())
 }
 
 fn main() {
-    env_logger::builder().target(Target::Stdout).init();
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .target(Target::Stderr)
+        .init();
     let mut srv = Server::from_args();
     if let Err(e) = run(&mut srv) {
         error!("{:?}", e);
@@ -93,14 +99,14 @@ fn main() {
     }
 }
 
-fn check_old_engine() -> Option<EngineOpt> {
-    if Path::new(KVS_ENGINE_FILE).exists() {
-        return Some(EngineOpt::kvs);
+fn check_old_engine() -> Result<Option<EngineOpt>> {
+    if current_dir()?.join(KVS_ENGINE_FILE).exists() {
+        return Ok(Some(EngineOpt::kvs));
     }
-    if Path::new(SLED_ENGINE_FILE).exists() {
-        return Some(EngineOpt::sled);
+    if current_dir()?.join(SLED_ENGINE_FILE).exists() {
+        return Ok(Some(EngineOpt::sled));
     }
-    None
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -111,5 +117,11 @@ mod tests {
     fn engine_opt_format() {
         println!("{}", EngineOpt::kvs);
         println!("{}", EngineOpt::sled);
+    }
+    #[test]
+    fn current_path() -> Result<()> {
+        let path = current_dir()?.join("foo.txt");
+        println!("{}", path.display());
+        Ok(())
     }
 }

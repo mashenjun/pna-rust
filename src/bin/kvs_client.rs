@@ -1,9 +1,8 @@
 #[macro_use]
-extern crate clap;
-#[macro_use]
 extern crate log;
 
-use kvs::{Command, Result};
+use env_logger::Target;
+use kvs::{Command, KvsClient, Result};
 use std::net::SocketAddr;
 use std::process::exit;
 use structopt::StructOpt;
@@ -26,11 +25,17 @@ struct Client {
 }
 
 fn run(client: &mut Client) -> Result<()> {
-    todo!();
+    let mut kv_client = KvsClient::new(client.addr)?;
+    info!("connect to {}", client.addr);
+    kv_client.process(&mut client.cmd)?;
     Ok(())
 }
 
 fn main() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .target(Target::Stderr)
+        .init();
     let mut client = Client::from_args();
     if let Err(e) = run(&mut client) {
         error!("{:?}", e);

@@ -1,5 +1,4 @@
-use crate::{KvsEngine, Request, Result};
-use serde::private::de::IdentifierDeserializer;
+use crate::{Command, KvsEngine, Result};
 use serde_json::Deserializer;
 use std::io::{BufReader, BufWriter, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -14,7 +13,7 @@ impl<E: KvsEngine> KvsServer<E> {
         KvsServer { engine }
     }
 
-    pub fn run(&mut self, addr: SocketAddr) -> Result<()> {
+    pub fn run(&self, addr: SocketAddr) -> Result<()> {
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
             match stream {
@@ -25,45 +24,52 @@ impl<E: KvsEngine> KvsServer<E> {
         Ok(())
     }
 
-    fn process(&mut self, stream: TcpStream) -> Result<()> {
+    fn process(&self, stream: TcpStream) -> Result<()> {
+        info!("accept connection: {}", stream.peer_addr()?);
         let reader = BufReader::new(&stream);
         let mut writer = BufWriter::new(&stream);
-        let payload_reader = Deserializer::from_reader(reader).into_iter::<Request>();
+        let payload_reader = Deserializer::from_reader(reader).into_iter::<Command>();
 
         for cmd in payload_reader {
+            // echo
             let cmd = cmd?;
-            match cmd {
-                Request::Get { key } => match self.engine.get(key) {
-                    Ok(res) => {
-                        serde_json::to_writer(&mut writer, &res)?;
-                        writer.flush()?;
-                    }
-                    Err(e) => {
-                        writer.write(format!("{}", e).as_ref())?;
-                        writer.flush()?;
-                    }
-                },
-                Request::Set { key, value } => match self.engine.set(key, value) {
-                    Ok(_) => {
-                        serde_json::to_writer(&mut writer, "Ok")?;
-                        writer.flush()?;
-                    }
-                    Err(e) => {
-                        writer.write(format!("{}", e).as_ref())?;
-                        writer.flush()?;
-                    }
-                },
-                Request::Remove { key } => match self.engine.remove(key) {
-                    Ok(_) => {
-                        serde_json::to_writer(&mut writer, "Ok")?;
-                        writer.flush()?;
-                    }
-                    Err(e) => {
-                        writer.write(format!("{}", e).as_ref())?;
-                        writer.flush()?;
-                    }
-                },
-            }
+            info!("cmd: {}", cmd);
+            writer.write(cmd.to_string().as_ref())?;
+            writer.write(b"\r\n");
+            writer.flush()?;
+            info!("echo flush: {}", cmd);
+            // match cmd {
+            //     Command::Get { key } => match self.engine.get(key) {
+            //         Ok(res) => {
+            //             serde_json::to_writer(&mut writer, &res)?;
+            //             writer.flush()?;
+            //         }
+            //         Err(e) => {
+            //             writer.write(format!("{}", e).as_ref())?;
+            //             writer.flush()?;
+            //         }
+            //     },
+            //     Command::Set { key, value } => match self.engine.set(key, value) {
+            //         Ok(_) => {
+            //             serde_json::to_writer(&mut writer, "Ok")?;
+            //             writer.flush()?;
+            //         }
+            //         Err(e) => {
+            //             writer.write(format!("{}", e).as_ref())?;
+            //             writer.flush()?;
+            //         }
+            //     },
+            //     Command::Remove { key } => match self.engine.remove(key) {
+            //         Ok(_) => {
+            //             serde_json::to_writer(&mut writer, "Ok")?;
+            //             writer.flush()?;
+            //         }
+            //         Err(e) => {
+            //             writer.write(format!("{}", e).as_ref())?;
+            //             writer.flush()?;
+            //         }
+            //     },
+            // }
         }
         Ok(())
     }

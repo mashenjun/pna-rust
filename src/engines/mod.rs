@@ -6,5 +6,7 @@ pub trait KvsEngine {
     fn remove(&mut self, key: String) -> Result<()>;
 }
 
+pub use kvs::KvStorage;
+
 mod kvs;
 mod sled;
