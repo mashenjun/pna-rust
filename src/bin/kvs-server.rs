@@ -8,7 +8,6 @@ use kvs::*;
 use std::env::current_dir;
 use std::fs::OpenOptions;
 use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
 use std::process::exit;
 use structopt::StructOpt;
 
@@ -70,8 +69,7 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(KVS_ENGINE_FILE)?;
-            // TODO
-            let storage = KvsServer::new(KvStorage::new());
+            let storage = KvsServer::new(KvStore::open(current_dir()?)?);
             return storage.run(srv.addr);
         }
         EngineOpt::sled => {
@@ -79,17 +77,15 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(SLED_ENGINE_FILE)?;
-            // TODO
-            let storage = KvsServer::new(KvStorage::new());
+            let storage = KvsServer::new(SledKvsEngine::open(current_dir()?)?);
             return storage.run(srv.addr);
         }
     }
-    Ok(())
 }
 
 fn main() {
     env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Info)
         .target(Target::Stderr)
         .init();
     let mut srv = Server::from_args();
