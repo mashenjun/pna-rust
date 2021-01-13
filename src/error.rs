@@ -1,4 +1,6 @@
+use std::fmt::{self, Display};
 use std::io;
+use std::str::Utf8Error;
 
 /// My Error Type
 #[derive(Debug)]
@@ -8,6 +10,8 @@ pub enum KvsError {
     InvalidCommandError,
     IOError(io::Error),
     SerdeJsonError(serde_json::Error),
+    Utf8Error(Utf8Error),
+    SledError(sled::Error),
 }
 
 impl From<io::Error> for KvsError {
@@ -19,6 +23,42 @@ impl From<io::Error> for KvsError {
 impl From<serde_json::Error> for KvsError {
     fn from(err: serde_json::Error) -> KvsError {
         KvsError::SerdeJsonError(err)
+    }
+}
+
+impl From<Utf8Error> for KvsError {
+    fn from(err: Utf8Error) -> Self {
+        KvsError::Utf8Error(err)
+    }
+}
+
+impl From<sled::Error> for KvsError {
+    fn from(err: sled::Error) -> KvsError {
+        KvsError::SledError(err)
+    }
+}
+impl Display for KvsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            KvsError::IOError(e) => {
+                write!(f, "Io error: {}", e)
+            }
+            KvsError::InvalidCommandError => {
+                write!(f, "Invalid command")
+            }
+            KvsError::KeyNotFoundError => {
+                write!(f, "Key not found")
+            }
+            KvsError::SerdeJsonError(e) => {
+                write!(f, "Serde json error: {}", e)
+            }
+            KvsError::Utf8Error(e) => {
+                write!(f, "Utf8 error: {}", e)
+            }
+            KvsError::SledError(e) => {
+                write!(f, "Sled error: {}", e)
+            }
+        }
     }
 }
 

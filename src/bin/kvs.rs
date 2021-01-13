@@ -1,4 +1,4 @@
-use kvs::{Command, KvStore, KvsError, Result};
+use kvs::{KvStore, KvsEngine, KvsError, Request, Result};
 use std::env::current_dir;
 use std::process;
 use structopt::StructOpt;
@@ -9,7 +9,7 @@ use structopt::StructOpt;
 #[structopt(about = "cli for in memory kv store")]
 struct Cli {
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
-    pub cmd: Option<Command>,
+    pub cmd: Option<Request>,
 }
 
 fn main() -> Result<()> {
@@ -26,23 +26,23 @@ fn main() -> Result<()> {
     }
 }
 
-fn run(cmd: &Option<Command>) -> Result<()> {
+fn run(cmd: &Option<Request>) -> Result<()> {
     match cmd {
         None => process::exit(1),
         Some(c) => {
             let mut store = KvStore::open(current_dir()?)?;
             match c {
-                Command::Set { key: k, value: v } => {
+                Request::Set { key: k, value: v } => {
                     store.set(k.to_string(), v.to_string())?;
                 }
-                Command::Get { key: k } => {
+                Request::Get { key: k } => {
                     if let Some(s) = store.get(k.to_string())? {
                         println!("{}", s);
                     } else {
                         println!("Key not found");
                     }
                 }
-                Command::Remove { key: k } => {
+                Request::Remove { key: k } => {
                     store.remove(k.to_string())?;
                 }
             }
