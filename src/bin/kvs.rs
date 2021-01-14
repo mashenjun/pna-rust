@@ -30,7 +30,7 @@ fn run(cmd: &Option<Request>) -> Result<()> {
     match cmd {
         None => process::exit(1),
         Some(c) => {
-            let mut store = KvStore::open(current_dir()?)?;
+            let store = KvStore::open(current_dir()?)?;
             match c {
                 Request::Set { key: k, value: v } => {
                     store.set(k.to_string(), v.to_string())?;
