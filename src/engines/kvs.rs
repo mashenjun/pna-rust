@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use structopt::StructOpt;
 
 const COMPACT_THRESHOLD_BYTES: u64 = 1024 * 1024;
@@ -22,17 +22,14 @@ pub struct KvStore {
     path: Arc<PathBuf>,
     // index stores key to the position in file and length.
     db: Arc<RwLock<KvDB>>,
-    // index: Arc<HashMap<String, Meta>>,
-    // cursor: Arc<u64>,
-    // dangling_bytes: Arc<u64>,
-    // file: Arc<File>,
 }
 
 struct KvDB {
     index: HashMap<String, Meta>,
     cursor: u64,
     dangling_bytes: u64,
-    file: File,
+    reader: Mutex<BufReader<File>>, // TODO for reading
+    file: File,                     // for writing
 }
 
 impl KvStore {
@@ -41,16 +38,12 @@ impl KvStore {
         let path: PathBuf = path.into();
         fs::create_dir_all(&path)?;
         let mut index: HashMap<String, Meta> = HashMap::new();
-        let mut file: File = OpenOptions::new()
-            .read(true)
-            .create(true)
-            .write(true)
-            .open(&data_path(&path))?;
-        let mut cursor: u64 = file.seek(SeekFrom::Start(0))?;
-        let decoder = serde_json::Deserializer::from_reader(&mut file);
+        let mut reader = BufReader::new(open_for_read(&data_path(&path), 0)?);
+        let decoder = serde_json::Deserializer::from_reader(&mut reader);
         let mut iterator = decoder.into_iter::<Command>();
         let mut dangling_bytes: u64 = 0;
         // TODO: can use better op than match
+        let mut cursor: u64 = 0;
         while let Some(cmd) = iterator.next() {
             let new_cursor = iterator.byte_offset() as u64;
             match cmd? {
@@ -67,51 +60,18 @@ impl KvStore {
             }
             cursor = new_cursor as u64;
         }
+        let file = open_for_append(&data_path(&path))?;
         Ok(KvStore {
             path: Arc::new(path),
             db: Arc::new(RwLock::new(KvDB {
                 index,
                 cursor,
                 dangling_bytes,
+                reader: Mutex::new(reader),
                 file,
             })),
-            // index: Arc::new(index),
-            // cursor: Arc::new(cursor),
-            // dangling_bytes: Arc::new(dangling_bytes),
-            // file: Arc::new(file),
-            // rwlock: Arc::new(RwLock::new(())),
         })
     }
-
-    // fn compact(&self) -> Result<()> {
-    //     // nothing can do on a PoisonError
-    //     if self.dangling_bytes <= COMPACT_THRESHOLD_BYTES {
-    //         return Ok(());
-    //     }
-    //     // do real compaction
-    //     let compact_path = compact_path(&self.path);
-    //     let mut compact_file: File = OpenOptions::new()
-    //         .create(true)
-    //         .write(true)
-    //         .open(&compact_path)?;
-    //
-    //     compact_file.seek(SeekFrom::Start(0))?;
-    //     let mut cursor = 0;
-    //     for meta in self.index.values_mut() {
-    //         self.file.seek(SeekFrom::Start(meta.0))?;
-    //         let mut cmd_reader = self.file.borrow_mut().take(meta.1);
-    //         let l = io::copy(&mut cmd_reader, compact_file.borrow_mut())?;
-    //         *meta = Meta(cursor, l);
-    //         cursor += l;
-    //     }
-    //     compact_file.flush()?;
-    //     self.file = compact_file;
-    //     let data_path = data_path(&self.path);
-    //     fs::remove_file(&data_path)?;
-    //     fs::rename(compact_path, data_path)?;
-    //     self.dangling_bytes = 0;
-    //     Ok(())
-    // }
 }
 
 impl KvDB {
@@ -121,23 +81,22 @@ impl KvDB {
             return Ok(());
         }
         // do real compaction
+        let mut reader = self.reader.lock().unwrap();
         let compact_path = compact_path(path);
-        let mut compact_file: File = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .open(&compact_path)?;
-
+        let mut compact_file: File = open_for_append(&compact_path)?;
         compact_file.seek(SeekFrom::Start(0))?;
         let mut cursor = 0;
         for meta in self.index.values_mut() {
-            self.file.seek(SeekFrom::Start(meta.0))?;
-            let mut cmd_reader = self.file.borrow_mut().take(meta.1);
+            reader.seek(SeekFrom::Start(meta.0))?;
+            let mut cmd_reader = reader.get_mut().take(meta.1);
             let l = io::copy(&mut cmd_reader, compact_file.borrow_mut())?;
             *meta = Meta(cursor, l);
             cursor += l;
         }
         compact_file.flush()?;
+        // update file and reader
         self.file = compact_file;
+        *reader = BufReader::new(open_for_read(&compact_path, 0)?);
         let data_path = data_path(path);
         fs::remove_file(&data_path)?;
         fs::rename(compact_path, data_path)?;
@@ -177,10 +136,11 @@ impl KvsEngine for KvStore {
         let db = self.db.read().unwrap();
         if let Some(meta) = db.index.get(&key) {
             // fetch kv form disk using the meta
-            let mut reader = db.file.try_clone()?;
+            let mut reader = db.reader.lock().unwrap();
             reader.seek(SeekFrom::Start(meta.0))?;
-            let cmd_reader = reader.take(meta.1);
-            return if let Command::Set { value, .. } = serde_json::from_reader(cmd_reader)? {
+            return if let Command::Set { value, .. } =
+                serde_json::from_reader(reader.get_mut().take(meta.1))?
+            {
                 Ok(Some(value))
             } else {
                 Err(KvsError::InvalidCommandError)
@@ -213,14 +173,30 @@ fn compact_path(path: &PathBuf) -> PathBuf {
     path.join("data.compact")
 }
 
+fn open_for_read(path: &PathBuf, pos: u64) -> Result<File> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(path)?;
+    file.seek(SeekFrom::Start(pos))?;
+    Ok(file)
+}
+
+fn open_for_append(path: &PathBuf) -> Result<File> {
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(path)?;
+    Ok(file)
+}
+
 /// Command defines command
-#[derive(StructOpt, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Command {
-    #[structopt(name = "get")]
     Get { key: String },
-    #[structopt(name = "set")]
     Set { key: String, value: String },
-    #[structopt(name = "rm")]
     Remove { key: String },
 }
 
@@ -248,5 +224,16 @@ struct Meta(u64, u64); // position and length
 impl Meta {
     pub fn new(p: u64, l: u64) -> Self {
         Meta(p, l)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env::current_dir;
+    #[test]
+    fn open_for_read() {
+        let path = current_dir().unwrap();
+        super::open_for_read(&data_path(&path), 0).unwrap();
     }
 }

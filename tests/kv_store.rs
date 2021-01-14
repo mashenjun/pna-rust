@@ -1,4 +1,6 @@
 use kvs::{KvStore, KvsEngine, Result};
+use std::env::current_dir;
+use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
 use std::thread;
 use tempfile::TempDir;
@@ -160,8 +162,9 @@ fn concurrent_set() -> Result<()> {
 
 #[test]
 fn concurrent_get() -> Result<()> {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-    let store = KvStore::open(temp_dir.path())?;
+    // let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let temp_dir = current_dir()?;
+    let store = KvStore::open(&temp_dir)?;
     for i in 0..100 {
         store
             .set(format!("key{}", i), format!("value{}", i))
@@ -188,7 +191,7 @@ fn concurrent_get() -> Result<()> {
 
     // Open from disk again and check persistent data
     drop(store);
-    let store = KvStore::open(temp_dir.path())?;
+    let store = KvStore::open(&temp_dir)?;
     let mut handles = Vec::new();
     for thread_id in 0..100 {
         let store = store.clone();

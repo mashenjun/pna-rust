@@ -1,10 +1,11 @@
 use crate::thread_pool::ThreadPool;
 use crate::Result;
+use std::thread;
 
 pub struct NaiveThreadPool {}
 
 impl ThreadPool for NaiveThreadPool {
-    fn new(threads: u32) -> Result<Self> {
+    fn new(_threads: u32) -> Result<Self> {
         return Ok(Self {});
     }
 
@@ -12,7 +13,7 @@ impl ThreadPool for NaiveThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
-        unimplemented!()
+        thread::spawn(f);
     }
 }
 
