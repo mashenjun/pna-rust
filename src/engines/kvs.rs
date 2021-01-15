@@ -9,10 +9,9 @@ use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
-use structopt::StructOpt;
 
 const COMPACT_THRESHOLD_BYTES: u64 = 1024 * 1024;
 
@@ -224,16 +223,5 @@ struct Meta(u64, u64); // position and length
 impl Meta {
     pub fn new(p: u64, l: u64) -> Self {
         Meta(p, l)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::env::current_dir;
-    #[test]
-    fn open_for_read() {
-        let path = current_dir().unwrap();
-        super::open_for_read(&data_path(&path), 0).unwrap();
     }
 }

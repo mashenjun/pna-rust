@@ -1,5 +1,7 @@
-pub use thread_pool::{NaiveThreadPool, RayonThreadPool, SharedQueueThreadPool};
+pub use share_queue::SharedQueueThreadPool;
+pub use thread_pool::{NaiveThreadPool, RayonThreadPool};
 
+mod share_queue;
 mod thread_pool;
 
 use crate::Result;

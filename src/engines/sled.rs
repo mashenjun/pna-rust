@@ -8,6 +8,10 @@ pub struct SledKvsEngine {
 }
 
 impl SledKvsEngine {
+    pub fn new(db: sled::Db) -> Self {
+        Self { db }
+    }
+
     pub fn open(path: impl Into<PathBuf>) -> Result<Self> {
         let path: PathBuf = path.into();
         fs::create_dir_all(&path)?;

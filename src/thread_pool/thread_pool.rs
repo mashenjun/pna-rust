@@ -13,36 +13,27 @@ impl ThreadPool for NaiveThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
+        // thread::spawn may panic directly
         thread::spawn(f);
     }
 }
 
-pub struct RayonThreadPool {}
+pub struct RayonThreadPool {
+    pool: rayon::ThreadPool,
+}
 
 impl ThreadPool for RayonThreadPool {
     fn new(threads: u32) -> Result<Self> {
-        return Ok(Self {});
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads as usize)
+            .build()?;
+        Ok(Self { pool })
     }
 
     fn spawn<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
     {
-        unimplemented!()
-    }
-}
-
-pub struct SharedQueueThreadPool {}
-
-impl ThreadPool for SharedQueueThreadPool {
-    fn new(threads: u32) -> Result<Self> {
-        return Ok(Self {});
-    }
-
-    fn spawn<F>(&self, f: F)
-    where
-        F: FnOnce() + Send + 'static,
-    {
-        unimplemented!()
+        self.pool.spawn(f);
     }
 }

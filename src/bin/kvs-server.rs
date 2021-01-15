@@ -11,7 +11,7 @@ use std::fs::OpenOptions;
 use std::net::SocketAddr;
 use std::process::exit;
 use structopt::StructOpt;
-use thread_pool::NaiveThreadPool;
+use thread_pool::SharedQueueThreadPool;
 
 arg_enum! {
     #[allow(non_camel_case_types)]
@@ -71,7 +71,7 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(KVS_ENGINE_FILE)?;
-            let pool = NaiveThreadPool::new(4)?;
+            let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
             let storage = KvsServer::new(KvStore::open(current_dir()?)?, pool);
             return storage.run(srv.addr);
         }
@@ -80,7 +80,7 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(SLED_ENGINE_FILE)?;
-            let pool = NaiveThreadPool::new(4)?;
+            let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
             let storage = KvsServer::new(SledKvsEngine::open(current_dir()?)?, pool);
             return storage.run(srv.addr);
         }

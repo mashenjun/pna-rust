@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate log;
 extern crate nom;
+#[macro_use(defer)]
+extern crate scopeguard;
 
 pub use client::KvsClient;
 pub use engines::{KvStore, KvsEngine, SledKvsEngine};
