@@ -15,7 +15,7 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
         KvsServer { engine, pool }
     }
 
-    pub fn run(self, addr: SocketAddr) -> Result<()> {
+    pub fn run(&self, addr: SocketAddr) -> Result<()> {
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
             let engine = self.engine.clone();
@@ -39,6 +39,7 @@ fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
 
     let mut buffer = [0; 1024];
     loop {
+        // reusable buffer
         let cnt = reader.read(&mut buffer)?;
         if cnt == 0 {
             return Ok(());

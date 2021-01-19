@@ -3,15 +3,16 @@
 pub use crate::{KvsError, Result};
 
 use crate::KvsEngine;
+use positioned_io::ReadAt;
 use serde::{Deserialize, Serialize};
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{self, Seek, SeekFrom, Write};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 const COMPACT_THRESHOLD_BYTES: u64 = 1024 * 1024;
 
@@ -27,8 +28,8 @@ struct KvDB {
     index: HashMap<String, Meta>,
     cursor: u64,
     dangling_bytes: u64,
-    reader: Mutex<BufReader<File>>, // TODO for reading
-    file: File,                     // for writing
+    reader: File, // for reading
+    file: File,   // for writing
 }
 
 impl KvStore {
@@ -37,7 +38,7 @@ impl KvStore {
         let path: PathBuf = path.into();
         fs::create_dir_all(&path)?;
         let mut index: HashMap<String, Meta> = HashMap::new();
-        let mut reader = BufReader::new(open_for_read(&data_path(&path), 0)?);
+        let mut reader = open_for_read(&data_path(&path), 0)?;
         let decoder = serde_json::Deserializer::from_reader(&mut reader);
         let mut iterator = decoder.into_iter::<Command>();
         let mut dangling_bytes: u64 = 0;
@@ -66,7 +67,7 @@ impl KvStore {
                 index,
                 cursor,
                 dangling_bytes,
-                reader: Mutex::new(reader),
+                reader,
                 file,
             })),
         })
@@ -80,22 +81,25 @@ impl KvDB {
             return Ok(());
         }
         // do real compaction
-        let mut reader = self.reader.lock().unwrap();
+        // let mut reader = self.reader.lock().unwrap();
         let compact_path = compact_path(path);
         let mut compact_file: File = open_for_append(&compact_path)?;
         compact_file.seek(SeekFrom::Start(0))?;
         let mut cursor = 0;
         for meta in self.index.values_mut() {
-            reader.seek(SeekFrom::Start(meta.0))?;
-            let mut cmd_reader = reader.get_mut().take(meta.1);
-            let l = io::copy(&mut cmd_reader, compact_file.borrow_mut())?;
+            // reader.seek(SeekFrom::Start(meta.0))?;
+            // let mut cmd_reader = reader.get_mut().take(meta.1);
+            let mut buf = vec![0u8; meta.1 as usize];
+            self.reader.read_exact_at(meta.0, buf.as_mut())?;
+            let l = io::copy(&mut &buf[..], compact_file.borrow_mut())?;
+            // let l = io::copy(&mut cmd_reader, compact_file.borrow_mut())?;
             *meta = Meta(cursor, l);
             cursor += l;
         }
         compact_file.flush()?;
         // update file and reader
         self.file = compact_file;
-        *reader = BufReader::new(open_for_read(&compact_path, 0)?);
+        self.reader = open_for_read(&compact_path, 0)?;
         let data_path = data_path(path);
         fs::remove_file(&data_path)?;
         fs::rename(compact_path, data_path)?;
@@ -135,10 +139,11 @@ impl KvsEngine for KvStore {
         let db = self.db.read().unwrap();
         if let Some(meta) = db.index.get(&key) {
             // fetch kv form disk using the meta
-            let mut reader = db.reader.lock().unwrap();
-            reader.seek(SeekFrom::Start(meta.0))?;
-            return if let Command::Set { value, .. } =
-                serde_json::from_reader(reader.get_mut().take(meta.1))?
+            // let mut reader = db.reader.lock().unwrap();
+            let mut buf = vec![0u8; meta.1 as usize];
+            db.reader.read_exact_at(meta.0, buf.as_mut())?;
+            return if let Command::Set { value, .. } = serde_json::from_slice(buf.as_ref())?
+            // serde_json::from_reader(reader.get_mut().take(meta.1))?
             {
                 Ok(Some(value))
             } else {

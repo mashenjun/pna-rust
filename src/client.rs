@@ -23,7 +23,7 @@ impl KvsClient {
         self.writer.flush()?;
         let mut buffer = String::new();
         let cnt = self.reader.read_line(&mut buffer)?;
-        info!("cnt {}", cnt);
+        debug!("cnt {}", cnt);
         let reply = parse_reply(buffer.as_str());
         return match reply {
             Err(_) => Err(KvsError::InvalidCommandError),
