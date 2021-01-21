@@ -4,7 +4,7 @@ extern crate criterion;
 use criterion::{BatchSize, Criterion, ParameterizedBenchmark};
 use kvs::{KvStore, KvsEngine, SledKvsEngine};
 use rand::prelude::*;
-use sled::{open, Db};
+use sled::open;
 use std::iter;
 use tempfile::TempDir;
 

@@ -14,6 +14,7 @@ pub enum KvsError {
     Utf8Error(Utf8Error),
     SledError(sled::Error),
     RayonError(rayon::ThreadPoolBuildError),
+    NixError(nix::Error),
 }
 
 impl From<io::Error> for KvsError {
@@ -46,6 +47,12 @@ impl From<rayon::ThreadPoolBuildError> for KvsError {
     }
 }
 
+impl From<nix::Error> for KvsError {
+    fn from(err: nix::Error) -> Self {
+        KvsError::NixError(err)
+    }
+}
+
 impl Display for KvsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -69,6 +76,9 @@ impl Display for KvsError {
             }
             KvsError::RayonError(e) => {
                 write!(f, "Rayon error: {}", e)
+            }
+            KvsError::NixError(e) => {
+                write!(f, "Nix error: {}", e)
             }
         }
     }
