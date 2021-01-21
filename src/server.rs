@@ -3,10 +3,11 @@ use crate::{parse_request, KvsEngine, KvsError, Reply, Request, Result};
 use nix::unistd::close;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::io::{BufReader, BufWriter, Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::os::unix::io::AsRawFd;
 use std::str;
 use std::sync::atomic;
+use std::time::Duration;
 
 /// The server of a key value store.
 pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
@@ -20,6 +21,8 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
     pub fn new(engine: E, pool: P) -> Result<Self> {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), Some(Protocol::tcp()))?;
         socket.set_reuse_address(true)?;
+        socket.set_reuse_port(true)?;
+        socket.set_linger(Some(Duration::new(0, 0)))?;
         Ok(KvsServer {
             engine,
             pool,
@@ -58,7 +61,11 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
 
     pub fn shutdown(&self) -> Result<()> {
         self.close.store(true, atomic::Ordering::Relaxed);
-        close(self.socket.as_raw_fd())?;
+        if cfg!(target_os = "macos") {
+            close(self.socket.as_raw_fd())?;
+        } else {
+            self.socket.shutdown(Shutdown::Both)?;
+        }
         Ok(())
     }
 }
@@ -134,31 +141,31 @@ fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
 mod tests {
     use super::*;
     use nix::unistd::close;
+    use std::net::Shutdown;
     use std::os::unix::io::AsRawFd;
     use std::sync::Arc;
     use std::thread;
 
     #[test]
     fn shutdown_socket() {
-        let socket = Arc::new(Socket::new(Domain::ipv4(), Type::stream(), None).unwrap());
+        let socket =
+            Arc::new(Socket::new(Domain::ipv4(), Type::stream(), Some(Protocol::tcp())).unwrap());
         socket
             .bind(&"127.0.0.1:4000".parse::<SocketAddr>().unwrap().into())
             .unwrap();
         socket.listen(128).unwrap();
-        // let ls = socket.into_tcp_listener();
         let ssocket = socket.clone();
-        let handler = thread::spawn(move || {
-            println!("accepting");
-            match ssocket.accept() {
-                Ok(_) => println!("new client"),
-                Err(e) => println!("got error: {:?}", e),
-            }
+        let handler = thread::spawn(move || match ssocket.accept() {
+            Ok(_) => println!("new client"),
+            Err(e) => println!("got error: {:?}", e),
         });
 
-        println!("file descriptor: {}", socket.as_raw_fd());
         std::thread::sleep(std::time::Duration::from_secs(1));
-        close(socket.as_raw_fd()).unwrap();
-        println!("close");
+        if cfg!(target_os = "macos") {
+            close(socket.as_raw_fd()).unwrap();
+        } else {
+            socket.shutdown(Shutdown::Both).unwrap();
+        }
         handler.join().unwrap();
     }
 }

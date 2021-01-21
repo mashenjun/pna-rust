@@ -21,7 +21,7 @@ scopeguard = "1.1.0"
 num_cpus = "1.0"
 rayon = "1.5.0"
 positioned-io = "0.2"
-socket2 = "0.3.19"
+socket2 = {version = "0.3.19", features = ["reuseport"]}
 nix = "0.19.0"
 
 [dev-dependencies]

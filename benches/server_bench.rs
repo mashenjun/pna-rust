@@ -74,7 +74,7 @@ fn read_queued_kvstore(c: &mut Criterion) {
                 let s = arc_server.clone();
                 thread::spawn(move || {
                     if let Err(e) = s.run(SocketAddr::from_str("127.0.0.1:4000").unwrap()) {
-                        return println!("{}", e);
+                        return println!("run error {}", e);
                     }
                 });
             }
@@ -200,7 +200,7 @@ fn write_rayon_sledkvengine(c: &mut Criterion) {
                 let s = arc_server.clone();
                 thread::spawn(move || {
                     if let Err(e) = s.run(SocketAddr::from_str("127.0.0.1:4000").unwrap()) {
-                        return println!("{}", e);
+                        return println!("run error {}", e);
                     }
                 });
             }
@@ -245,7 +245,7 @@ fn read_rayon_sledkvengine(c: &mut Criterion) {
                 let s = arc_server.clone();
                 thread::spawn(move || {
                     if let Err(e) = s.run(SocketAddr::from_str("127.0.0.1:4000").unwrap()) {
-                        return println!("{}", e);
+                        return println!("run error {}", e);
                     }
                 });
             }
