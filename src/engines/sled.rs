@@ -2,11 +2,16 @@ use crate::{KvsEngine, KvsError, Result};
 use std::path::PathBuf;
 use std::{fs, str};
 
+#[derive(Clone)]
 pub struct SledKvsEngine {
     db: sled::Db,
 }
 
 impl SledKvsEngine {
+    pub fn new(db: sled::Db) -> Self {
+        Self { db }
+    }
+
     pub fn open(path: impl Into<PathBuf>) -> Result<Self> {
         let path: PathBuf = path.into();
         fs::create_dir_all(&path)?;
@@ -16,13 +21,13 @@ impl SledKvsEngine {
 }
 
 impl KvsEngine for SledKvsEngine {
-    fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&self, key: String, value: String) -> Result<()> {
         self.db.insert(key, value.into_bytes())?;
         self.db.flush()?;
         Ok(())
     }
 
-    fn get(&mut self, key: String) -> Result<Option<String>> {
+    fn get(&self, key: String) -> Result<Option<String>> {
         let value = self.db.get(key)?;
         let ret = match value {
             Some(data) => {
@@ -34,7 +39,7 @@ impl KvsEngine for SledKvsEngine {
         ret
     }
 
-    fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&self, key: String) -> Result<()> {
         self.db.remove(key)?.ok_or(KvsError::KeyNotFoundError)?;
         self.db.flush()?;
         Ok(())

@@ -1,3 +1,4 @@
+use rayon::ThreadPoolBuildError;
 use std::fmt::{self, Display};
 use std::io;
 use std::str::Utf8Error;
@@ -12,16 +13,18 @@ pub enum KvsError {
     SerdeJsonError(serde_json::Error),
     Utf8Error(Utf8Error),
     SledError(sled::Error),
+    RayonError(rayon::ThreadPoolBuildError),
+    NixError(nix::Error),
 }
 
 impl From<io::Error> for KvsError {
-    fn from(err: io::Error) -> KvsError {
+    fn from(err: io::Error) -> Self {
         KvsError::IOError(err)
     }
 }
 
 impl From<serde_json::Error> for KvsError {
-    fn from(err: serde_json::Error) -> KvsError {
+    fn from(err: serde_json::Error) -> Self {
         KvsError::SerdeJsonError(err)
     }
 }
@@ -33,10 +36,23 @@ impl From<Utf8Error> for KvsError {
 }
 
 impl From<sled::Error> for KvsError {
-    fn from(err: sled::Error) -> KvsError {
+    fn from(err: sled::Error) -> Self {
         KvsError::SledError(err)
     }
 }
+
+impl From<rayon::ThreadPoolBuildError> for KvsError {
+    fn from(err: ThreadPoolBuildError) -> Self {
+        KvsError::RayonError(err)
+    }
+}
+
+impl From<nix::Error> for KvsError {
+    fn from(err: nix::Error) -> Self {
+        KvsError::NixError(err)
+    }
+}
+
 impl Display for KvsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -57,6 +73,12 @@ impl Display for KvsError {
             }
             KvsError::SledError(e) => {
                 write!(f, "Sled error: {}", e)
+            }
+            KvsError::RayonError(e) => {
+                write!(f, "Rayon error: {}", e)
+            }
+            KvsError::NixError(e) => {
+                write!(f, "Nix error: {}", e)
             }
         }
     }

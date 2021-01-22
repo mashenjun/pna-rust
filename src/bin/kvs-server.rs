@@ -4,12 +4,14 @@ extern crate clap;
 extern crate log;
 
 use env_logger::Target;
+use kvs::thread_pool::ThreadPool;
 use kvs::*;
 use std::env::current_dir;
 use std::fs::OpenOptions;
 use std::net::SocketAddr;
 use std::process::exit;
 use structopt::StructOpt;
+use thread_pool::SharedQueueThreadPool;
 
 arg_enum! {
     #[allow(non_camel_case_types)]
@@ -69,7 +71,8 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(KVS_ENGINE_FILE)?;
-            let storage = KvsServer::new(KvStore::open(current_dir()?)?);
+            let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
+            let storage = KvsServer::new(KvStore::open(current_dir()?)?, pool)?;
             return storage.run(srv.addr);
         }
         EngineOpt::sled => {
@@ -77,7 +80,8 @@ fn run(srv: &mut Server) -> Result<()> {
                 .write(true)
                 .create(true)
                 .open(SLED_ENGINE_FILE)?;
-            let storage = KvsServer::new(SledKvsEngine::open(current_dir()?)?);
+            let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
+            let storage = KvsServer::new(SledKvsEngine::open(current_dir()?)?, pool)?;
             return storage.run(srv.addr);
         }
     }
@@ -90,7 +94,7 @@ fn main() {
         .init();
     let mut srv = Server::from_args();
     if let Err(e) = run(&mut srv) {
-        error!("{:?}", e);
+        error!("run err {:?}", e);
         exit(1)
     }
 }
