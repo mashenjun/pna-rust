@@ -70,6 +70,7 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
     }
 }
 
+// TODO: the loop never loop?
 fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
     debug!("accept connection: {}", stream.peer_addr()?);
     let mut reader = BufReader::new(&stream);
@@ -93,9 +94,9 @@ fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
                     Request::Get { key } => match engine.get(key) {
                         Ok(res) => {
                             if let Some(s) = res {
-                                writer.write(Reply::SingleLine(s).to_resp().as_ref())?;
+                                writer.write_all(Reply::SingleLine(s).to_resp().as_ref())?;
                             } else {
-                                writer.write(
+                                writer.write_all(
                                     Reply::SingleLine("Key not found".to_string())
                                         .to_resp()
                                         .as_ref(),
@@ -104,29 +105,31 @@ fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
                             writer.flush()?;
                         }
                         Err(e) => {
-                            writer.write(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
                             writer.flush()?;
                         }
                     },
 
-                    Request::Set { key, value } => match engine.set(key.clone(), value) {
+                    Request::Set { key, value } => match engine.set(key, value) {
                         Ok(_) => {
-                            writer.write(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+                            writer
+                                .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
                             writer.flush()?;
                             // println!("done: {:?}", key);
                         }
                         Err(e) => {
-                            writer.write(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
                             writer.flush()?;
                         }
                     },
                     Request::Remove { key } => match engine.remove(key) {
                         Ok(_) => {
-                            writer.write(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+                            writer
+                                .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
                             writer.flush()?;
                         }
                         Err(e) => {
-                            writer.write(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
                             writer.flush()?;
                         }
                     },

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
 use structopt::StructOpt;
 
+// Request define the request in RESP format
 #[derive(StructOpt, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Request {
     #[structopt(name = "get")]
@@ -41,11 +42,11 @@ impl Request {
     // simply format using REdis Serialization Protocol
     pub fn to_resp(&self) -> String {
         let s = match self {
-            Request::Get { key } => String::from(format!("*2\r\n{}\r\n{}\r\n", "GET", key)),
+            Request::Get { key } => format!("*2\r\n{}\r\n{}\r\n", "GET", key),
             Request::Set { key, value } => {
-                String::from(format!("*3\r\n{}\r\n{}\r\n{}\r\n", "SET", key, value))
+                format!("*3\r\n{}\r\n{}\r\n{}\r\n", "SET", key, value)
             }
-            Request::Remove { key } => String::from(format!("*2\r\n{}\r\n{}\r\n", "DEL", key)),
+            Request::Remove { key } => format!("*2\r\n{}\r\n{}\r\n", "DEL", key),
         };
         s
     }
@@ -78,19 +79,18 @@ impl Display for Reply {
 impl Reply {
     pub fn to_resp(&self) -> String {
         let s = match self {
-            Reply::SingleLine(data) => String::from(format!("+{}\r\n", data)),
-            Reply::Err(data) => String::from(format!("-{}\r\n", data)),
-            Reply::Int(data) => String::from(format!(":{}\r\n", data)),
+            Reply::SingleLine(data) => format!("+{}\r\n", data),
+            Reply::Err(data) => format!("-{}\r\n", data),
+            Reply::Int(data) => format!(":{}\r\n", data),
         };
         s
     }
     pub fn should_println(&self) -> bool {
-        let ok = match self {
-            Reply::SingleLine(data) => data.len() > 0,
+        match self {
+            Reply::SingleLine(data) => !data.is_empty(),
             Reply::Err(_) => true,
             Reply::Int(_) => true,
-        };
-        ok
+        }
     }
 }
 
@@ -105,7 +105,7 @@ fn parse_err(input: &str) -> IResult<&str, Reply> {
 }
 
 fn to_i64(input: &str) -> Result<i64, std::num::ParseIntError> {
-    i64::from_str_radix(input, 10)
+    input.parse::<i64>()
 }
 
 fn parse_int(input: &str) -> IResult<&str, Reply> {
@@ -117,7 +117,7 @@ fn parse_int(input: &str) -> IResult<&str, Reply> {
 }
 
 pub fn parse_reply(input: &str) -> IResult<&str, Reply> {
-    let (remain, prefix) = take(1 as usize)(input)?;
+    let (remain, prefix) = take(1usize)(input)?;
     match prefix {
         ":" => Ok(parse_int(remain)?),
         "+" => Ok(parse_single_line(remain)?),
@@ -163,7 +163,7 @@ fn parse_remove(input: &str) -> IResult<&str, Request> {
 }
 
 pub fn parse_request(input: &str) -> IResult<&str, Request> {
-    let (remain, _) = delimited(tag("*"), map_res(take(1 as usize), to_i64), tag("\r\n"))(input)?;
+    let (remain, _) = delimited(tag("*"), map_res(take(1usize), to_i64), tag("\r\n"))(input)?;
     let (remain, command) = parse_arg(remain)?;
     match command {
         "GET" => Ok(parse_get(remain)?),

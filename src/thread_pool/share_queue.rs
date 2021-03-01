@@ -1,6 +1,7 @@
 use crate::thread_pool::ThreadPool;
 use crate::Result;
 use crossbeam::channel::{bounded, Receiver, Sender};
+use scopeguard::defer;
 use std::thread;
 use std::thread::JoinHandle;
 

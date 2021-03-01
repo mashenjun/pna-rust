@@ -25,15 +25,15 @@ impl KvsClient {
     }
 
     pub fn process(&mut self, req: &Request) -> Result<Reply> {
-        self.writer.write(req.to_resp().as_ref())?;
+        self.writer.write_all(req.to_resp().as_ref())?;
         self.writer.flush()?;
         let mut buffer = String::new();
         let cnt = self.reader.read_line(&mut buffer)?;
         debug!("cnt {}", cnt);
         let reply = parse_reply(buffer.as_str());
-        return match reply {
+        match reply {
             Err(_) => Err(KvsError::InvalidCommandError),
             Ok((_, reply)) => Ok(reply),
-        };
+        }
     }
 }

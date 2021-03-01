@@ -6,7 +6,7 @@ pub struct NaiveThreadPool {}
 
 impl ThreadPool for NaiveThreadPool {
     fn new(_threads: u32) -> Result<Self> {
-        return Ok(Self {});
+        Ok(Self {})
     }
 
     fn spawn<F>(&self, f: F)
