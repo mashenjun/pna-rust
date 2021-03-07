@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
 use structopt::StructOpt;
 
+// TODO: impl Serialize and Deserialize for Request
 // Request define the request in RESP format
 #[derive(StructOpt, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Request {
@@ -52,6 +53,7 @@ impl Request {
     }
 }
 
+// TODO: impl Serialize and Deserialize for Reply
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Reply {
     SingleLine(String),
@@ -94,6 +96,7 @@ impl Reply {
     }
 }
 
+// norm impl
 fn parse_single_line(input: &str) -> IResult<&str, Reply> {
     let (remain, res) = terminated(take_while(|c| c != '\r' && c != '\n'), tag("\r\n"))(input)?;
     Ok((remain, Reply::SingleLine(res.to_string())))
