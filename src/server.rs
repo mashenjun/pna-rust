@@ -1,14 +1,11 @@
 use crate::thread_pool::ThreadPool;
-use crate::{parse_request, KvsEngine, KvsError, Reply, Request, Result};
+use crate::{KvsEngine, Reply, Request, Result};
 use nix::unistd::close;
-use nom::Parser;
-use serde_json::Deserializer;
 use serde_resp::SimpleDeserializer;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, BufWriter, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::os::unix::io::AsRawFd;
-use std::str;
 use std::sync::atomic;
 use std::time::Duration;
 
@@ -80,7 +77,6 @@ fn handle_serde<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
     let mut writer = BufWriter::new(&stream);
     for req in req_reader {
         let req = req?;
-        debug!("Receive request from {:?}", req);
         match req {
             Request::Get { key } => match engine.get(key) {
                 Ok(res) => {
@@ -126,76 +122,76 @@ fn handle_serde<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
     Ok(())
 }
 
-// TODO: the loop never loop?
+// TODO: the loop never loop from `cargo clippy`?
 // Option2: use nom parser to process the stream.
-fn handle_norm<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
-    debug!("accept connection: {}", stream.peer_addr()?);
-    let mut reader = BufReader::new(&stream);
-    let mut writer = BufWriter::new(&stream);
-
-    let mut buffer = [0; 1024];
-    loop {
-        // reusable buffer
-        let cnt = reader.read(&mut buffer)?;
-        if cnt == 0 {
-            return Ok(());
-        }
-        let data = str::from_utf8(buffer[..cnt].as_ref())?;
-        let req = parse_request(data);
-        match req {
-            Err(_) => {
-                return Err(KvsError::InvalidCommandError);
-            }
-            Ok((_, req)) => {
-                match req {
-                    Request::Get { key } => match engine.get(key) {
-                        Ok(res) => {
-                            if let Some(s) = res {
-                                writer.write_all(Reply::SingleLine(s).to_resp().as_ref())?;
-                            } else {
-                                writer.write_all(
-                                    Reply::SingleLine("Key not found".to_string())
-                                        .to_resp()
-                                        .as_ref(),
-                                )?;
-                            }
-                            writer.flush()?;
-                        }
-                        Err(e) => {
-                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
-                            writer.flush()?;
-                        }
-                    },
-
-                    Request::Set { key, value } => match engine.set(key, value) {
-                        Ok(_) => {
-                            writer
-                                .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
-                            writer.flush()?;
-                            // println!("done: {:?}", key);
-                        }
-                        Err(e) => {
-                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
-                            writer.flush()?;
-                        }
-                    },
-                    Request::Remove { key } => match engine.remove(key) {
-                        Ok(_) => {
-                            writer
-                                .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
-                            writer.flush()?;
-                        }
-                        Err(e) => {
-                            writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
-                            writer.flush()?;
-                        }
-                    },
-                }
-                return Ok(());
-            }
-        }
-    }
-}
+// fn handle_norm<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
+//     debug!("accept connection: {}", stream.peer_addr()?);
+//     let mut reader = BufReader::new(&stream);
+//     let mut writer = BufWriter::new(&stream);
+//
+//     let mut buffer = [0; 1024];
+//     loop {
+//         // reusable buffer
+//         let cnt = reader.read(&mut buffer)?;
+//         if cnt == 0 {
+//             return Ok(());
+//         }
+//         let data = str::from_utf8(buffer[..cnt].as_ref())?;
+//         let req = parse_request(data);
+//         match req {
+//             Err(_) => {
+//                 return Err(KvsError::InvalidCommandError);
+//             }
+//             Ok((_, req)) => {
+//                 match req {
+//                     Request::Get { key } => match engine.get(key) {
+//                         Ok(res) => {
+//                             if let Some(s) = res {
+//                                 writer.write_all(Reply::SingleLine(s).to_resp().as_ref())?;
+//                             } else {
+//                                 writer.write_all(
+//                                     Reply::SingleLine("Key not found".to_string())
+//                                         .to_resp()
+//                                         .as_ref(),
+//                                 )?;
+//                             }
+//                             writer.flush()?;
+//                         }
+//                         Err(e) => {
+//                             writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+//                             writer.flush()?;
+//                         }
+//                     },
+//
+//                     Request::Set { key, value } => match engine.set(key, value) {
+//                         Ok(_) => {
+//                             writer
+//                                 .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+//                             writer.flush()?;
+//                             // println!("done: {:?}", key);
+//                         }
+//                         Err(e) => {
+//                             writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+//                             writer.flush()?;
+//                         }
+//                     },
+//                     Request::Remove { key } => match engine.remove(key) {
+//                         Ok(_) => {
+//                             writer
+//                                 .write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+//                             writer.flush()?;
+//                         }
+//                         Err(e) => {
+//                             writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+//                             writer.flush()?;
+//                         }
+//                     },
+//                 }
+//                 return Ok(());
+//             }
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

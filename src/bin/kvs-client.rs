@@ -60,27 +60,27 @@ enum Command {
 
 impl Command {
     pub fn to_request(&self) -> (Request, SocketAddr) {
-        return match self {
+            match self {
             Command::Get { key, addr } => (
                 Request::Get {
                     key: key.to_string(),
                 },
-                addr.clone(),
+                *addr,
             ),
             Command::Set { key, value, addr } => (
                 Request::Set {
                     key: key.to_string(),
                     value: value.to_string(),
                 },
-                addr.clone(),
+                *addr,
             ),
             Command::Remove { key, addr } => (
                 Request::Remove {
                     key: key.to_string(),
                 },
-                addr.clone(),
+                *addr,
             ),
-        };
+        }
     }
 }
 
