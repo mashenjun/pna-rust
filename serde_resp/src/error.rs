@@ -2,8 +2,8 @@ use std;
 use std::fmt::{self, Display};
 
 use serde::{de, ser};
-use std::string::FromUtf8Error;
 use std::io;
+use std::string::FromUtf8Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -52,7 +52,7 @@ impl Display for Error {
             Error::Syntax => formatter.write_str("incorrect syntax"),
             Error::TrailingCharacters => formatter.write_str("trailing characters"),
             Error::NotSupport => formatter.write_str("not support"),
-            Error::FromUtf8Error( e) => write!(formatter, "{}", e),
+            Error::FromUtf8Error(e) => write!(formatter, "{}", e),
         }
     }
 }

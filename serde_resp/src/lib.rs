@@ -1,17 +1,16 @@
 // a very simple RESP serde Serializer and Deserializer trait
-#![allow(dead_code,unused_must_use,unused_variables)]
+#![allow(dead_code, unused_must_use, unused_variables)]
 #![allow(unused_imports)]
 mod de;
 mod error;
 mod ser;
 
-pub use de::{SimpleDeserializer, from_buf_reader, from_str};
+pub use de::{from_buf_reader, from_str, SimpleDeserializer};
 pub use error::{Error, Result};
 pub use ser::{to_string, to_writer, SimpleSerializer};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::Display;
-use serde::{Deserialize, Serialize};
-
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 // internal use

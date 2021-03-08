@@ -15,27 +15,25 @@ pub struct SimpleSerializer<W: Write> {
 //
 // This basic serializer supports only `to_string`.
 pub fn to_string<T>(value: &T) -> Result<String>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
-    let mut buf :Vec<u8> = Vec::new();
+    let mut buf: Vec<u8> = Vec::new();
     to_writer(value, &mut buf);
     Ok(String::from_utf8(buf)?)
 }
 
-pub fn to_writer<T, W>(value: &T, writer: &mut W) ->Result<()>
+pub fn to_writer<T, W>(value: &T, writer: &mut W) -> Result<()>
 where
     T: Serialize,
     W: Write,
 {
-    let mut serializer = SimpleSerializer {
-        writer,
-    };
+    let mut serializer = SimpleSerializer { writer };
     value.serialize(&mut serializer)?;
     Ok(())
 }
 
-impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
+impl<W: Write> ser::Serializer for &mut SimpleSerializer<W> {
     // The output type produced by this `Serializer` during successful
     // serialization. Most serializers that produce text or binary output should
     // set `Ok = ()` and serialize into an `io::Write` or buffer contained
@@ -103,7 +101,6 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
 
     fn serialize_u64(self, v: u64) -> Result<()> {
         unimplemented!()
-
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {
@@ -133,11 +130,10 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
     // string here. Binary formats will typically represent byte arrays more
     // compactly.
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
-        self.writer.write_all( v)?;
+        self.writer.write_all(v)?;
         self.writer.write_all(b"\r\n")?;
         Ok(())
     }
-
 
     // An absent optional is represented as the JSON `null`.
     fn serialize_none(self) -> Result<()> {
@@ -150,8 +146,8 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
     // what people expect when working with JSON. Other formats are encouraged
     // to behave more intelligently if possible.
     fn serialize_some<T>(self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
@@ -184,13 +180,9 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
 
     // As is done here, serializers are encouraged to treat newtype structs as
     // insignificant wrappers around the data they contain.
-    fn serialize_newtype_struct<T>(
-        self,
-        _name: &'static str,
-        value: &T,
-    ) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
+    where
+        T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
@@ -207,17 +199,25 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
         variant: &'static str,
         value: &T,
     ) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
-        if name!= "Reply" {
+        if name != "Reply" {
             return Err(Error::NotSupport);
         }
         match variant_index {
-            0 => { self.writer.write_all(b"+")?; },
-            1 => { self.writer.write_all(b"-")?; },
-            2 => { self.writer.write_all(b":")?; }
-            _ => { return Err(Error::NotSupport); },
+            0 => {
+                self.writer.write_all(b"+")?;
+            }
+            1 => {
+                self.writer.write_all(b"-")?;
+            }
+            2 => {
+                self.writer.write_all(b":")?;
+            }
+            _ => {
+                return Err(Error::NotSupport);
+            }
         }
         value.serialize(&mut *self)?;
         Ok(())
@@ -276,11 +276,7 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
     // omit the field names when serializing structs because the corresponding
     // Deserialize implementation is required to know what the keys are without
     // looking at the serialized data.
-    fn serialize_struct(
-        self,
-        _name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         self.serialize_map(Some(len))
     }
 
@@ -297,10 +293,18 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
             return Err(Error::NotSupport);
         }
         match variant_index {
-            0 => {self.writer.write_all(b"*2\r\nGET\r\n")?;},
-            1 => {self.writer.write_all(b"*3\r\nSET\r\n")?;},
-            2 => {self.writer.write_all(b"*2\r\nDEL\r\n")?;}
-            _ => {return Err(Error::NotSupport);},
+            0 => {
+                self.writer.write_all(b"*2\r\nGET\r\n")?;
+            }
+            1 => {
+                self.writer.write_all(b"*3\r\nSET\r\n")?;
+            }
+            2 => {
+                self.writer.write_all(b"*2\r\nDEL\r\n")?;
+            }
+            _ => {
+                return Err(Error::NotSupport);
+            }
         }
         Ok(self)
     }
@@ -313,7 +317,7 @@ impl<W:Write> ser::Serializer for &mut SimpleSerializer<W> {
 //
 // This impl is SerializeSeq so these methods are called after `serialize_seq`
 // is called on the Serializer.
-impl<W:Write> ser::SerializeSeq for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeSeq for &mut SimpleSerializer<W> {
     // Must match the `Ok` type of the serializer.
     type Ok = ();
     // Must match the `Error` type of the serializer.
@@ -321,8 +325,8 @@ impl<W:Write> ser::SerializeSeq for &mut SimpleSerializer<W> {
 
     // Serialize a single element of the sequence.
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -334,13 +338,13 @@ impl<W:Write> ser::SerializeSeq for &mut SimpleSerializer<W> {
 }
 
 // Same thing but for tuples.
-impl<W:Write> ser::SerializeTuple for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeTuple for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -351,13 +355,13 @@ impl<W:Write> ser::SerializeTuple for &mut SimpleSerializer<W> {
 }
 
 // Same thing but for tuple structs.
-impl<W:Write> ser::SerializeTupleStruct for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeTupleStruct for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -376,13 +380,13 @@ impl<W:Write> ser::SerializeTupleStruct for &mut SimpleSerializer<W> {
 //
 // So the `end` method in this impl is responsible for closing both the `]` and
 // the `}`.
-impl<W:Write> ser::SerializeTupleVariant for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeTupleVariant for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -400,7 +404,7 @@ impl<W:Write> ser::SerializeTupleVariant for &mut SimpleSerializer<W> {
 // `serialize_entry` method allows serializers to optimize for the case where
 // key and value are both available simultaneously. In JSON it doesn't make a
 // difference so the default behavior for `serialize_entry` is fine.
-impl<W:Write> ser::SerializeMap for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeMap for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -413,8 +417,8 @@ impl<W:Write> ser::SerializeMap for &mut SimpleSerializer<W> {
     // (instead of `&mut **self`) and having that other serializer only
     // implement `serialize_str` and return an error on any other data type.
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -423,8 +427,8 @@ impl<W:Write> ser::SerializeMap for &mut SimpleSerializer<W> {
     // `serialize_key` or at the beginning of `serialize_value`. In this case
     // the code is a bit simpler having it here.
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
     }
@@ -436,33 +440,31 @@ impl<W:Write> ser::SerializeMap for &mut SimpleSerializer<W> {
 
 // Structs are like maps in which the keys are constrained to be compile-time
 // constant strings.
-impl<W:Write> ser::SerializeStruct for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeStruct for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         unimplemented!()
-
     }
 
     fn end(self) -> Result<()> {
         unimplemented!()
-
     }
 }
 
 // Similar to `SerializeTupleVariant`, here the `end` method is responsible for
 // closing both of the curly braces opened by `serialize_struct_variant`.
-impl<W:Write> ser::SerializeStructVariant for &mut SimpleSerializer<W> {
+impl<W: Write> ser::SerializeStructVariant for &mut SimpleSerializer<W> {
     type Ok = ();
     type Error = Error;
 
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
-        where
-            T: ?Sized + Serialize,
+    where
+        T: ?Sized + Serialize,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -476,28 +478,35 @@ impl<W:Write> ser::SerializeStructVariant for &mut SimpleSerializer<W> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Request,Reply};
     use super::*;
+    use crate::{Reply, Request};
 
     #[test]
     fn test_request_get() {
-        let expect =  b"*2\r\nGET\r\nfoo\r\n";
-        let request = Request::Get { key: "foo".to_string() };
+        let expect = b"*2\r\nGET\r\nfoo\r\n";
+        let request = Request::Get {
+            key: "foo".to_string(),
+        };
         assert_eq!(to_string(&request).unwrap().as_bytes(), expect);
     }
 
     #[test]
     fn test_request_set() {
-        let expect =  b"*3\r\nSET\r\nfoo\r\nbar\r\n";
-        let request = Request::Set { key: "foo".to_string(), value: "bar".to_string() };
+        let expect = b"*3\r\nSET\r\nfoo\r\nbar\r\n";
+        let request = Request::Set {
+            key: "foo".to_string(),
+            value: "bar".to_string(),
+        };
         let s = to_string(&request).unwrap();
         assert_eq!(s.as_bytes(), expect);
     }
 
     #[test]
     fn test_request_del() {
-        let expect =  b"*2\r\nDEL\r\nfoo\r\n";
-        let request = Request::Remove { key: "foo".to_string() };
+        let expect = b"*2\r\nDEL\r\nfoo\r\n";
+        let request = Request::Remove {
+            key: "foo".to_string(),
+        };
         assert_eq!(to_string(&request).unwrap().as_bytes(), expect);
     }
 
@@ -522,4 +531,3 @@ mod tests {
         assert_eq!(to_string(&reply).unwrap().as_bytes(), expect);
     }
 }
-
