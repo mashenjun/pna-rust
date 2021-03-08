@@ -15,6 +15,7 @@ pub enum KvsError {
     SledError(sled::Error),
     RayonError(rayon::ThreadPoolBuildError),
     NixError(nix::Error),
+    SerdeRespError(serde_resp::Error),
 }
 
 impl From<io::Error> for KvsError {
@@ -53,6 +54,12 @@ impl From<nix::Error> for KvsError {
     }
 }
 
+impl From<serde_resp::Error> for KvsError {
+    fn from(err: serde_resp::Error) -> Self {
+        Self::SerdeRespError(err)
+    }
+}
+
 impl Display for KvsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -79,6 +86,9 @@ impl Display for KvsError {
             }
             KvsError::NixError(e) => {
                 write!(f, "Nix error: {}", e)
+            }
+            KvsError::SerdeRespError(e) => {
+                write!(f, "Serde resp error: {}", e)
             }
         }
     }

@@ -4,15 +4,16 @@ use serde::de::{Visitor, DeserializeOwned, EnumAccess, DeserializeSeed, VariantA
 use crate::{Error, Result, SimpleSerializer};
 use crate::error::Error::*;
 use std::f32::consts::E;
+use core::marker::PhantomData;
 
-pub struct Deserializer<'de, R: BufRead> {
+pub struct SimpleDeserializer<'de, R: BufRead> {
     // This string starts empty and JSON is appended as values are serialized.
     reader: &'de mut R,
 }
 
-impl<'de, R: BufRead> Deserializer<'de, R> {
+impl<'de, R: BufRead> SimpleDeserializer<'de, R> {
     pub fn from_buf_reader(reader: &'de mut R) -> Self {
-        Deserializer { reader }
+        SimpleDeserializer { reader }
     }
 
     fn next_byte(&mut self) -> Result<u8> {
@@ -30,9 +31,23 @@ impl<'de, R: BufRead> Deserializer<'de, R> {
 
         Ok(s.trim_end().to_string())
     }
+
+    pub fn into_iter<T>(self) -> StreamDeserializer<'de, R, T>
+        where
+            T: de::Deserialize<'de>,
+    {
+        // This cannot be an implementation of std::iter::IntoIterator because
+        // we need the caller to choose what T is.
+        StreamDeserializer {
+            deserializer: self,
+            failed: false,
+            output: PhantomData,
+            lifetime: PhantomData,
+        }
+    }
 }
 
-impl <'de, R:BufRead> de::Deserializer<'de> for &mut Deserializer<'de, R> {
+impl <'de, R:BufRead> de::Deserializer<'de> for &mut SimpleDeserializer<'de, R> {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value> where
@@ -239,15 +254,14 @@ impl <'de, R:BufRead> de::Deserializer<'de> for &mut Deserializer<'de, R> {
 }
 
 struct Seq<'a, 'de: 'a, R: BufRead> {
-    deserializer: &'a mut Deserializer<'de, R>,
+    deserializer: &'a mut SimpleDeserializer<'de, R>,
 }
 
 impl <'a, 'de, R:BufRead> Seq<'a, 'de, R> {
-    fn new(de: &'a mut Deserializer<'de, R>) -> Self{
+    fn new(de: &'a mut SimpleDeserializer<'de, R>) -> Self{
         Self{ deserializer: de, }
     }
 }
-
 
 impl<'de, R: BufRead> SeqAccess<'de> for Seq<'_, 'de, R> {
     type Error = Error;
@@ -260,11 +274,11 @@ impl<'de, R: BufRead> SeqAccess<'de> for Seq<'_, 'de, R> {
 
 // a wrapper struct to deal with EnumAccess and VariantAccess
 struct Enum<'a, 'de: 'a, R: BufRead> {
-    deserializer: &'a mut Deserializer<'de, R>,
+    deserializer: &'a mut SimpleDeserializer<'de, R>,
 }
 
 impl<'a, 'de, R: BufRead> Enum<'a, 'de, R> {
-    fn new(de: &'a mut Deserializer<'de, R>) -> Self {
+    fn new(de: &'a mut SimpleDeserializer<'de, R>) -> Self {
         Self { deserializer: de }
     }
 }
@@ -305,6 +319,57 @@ impl <'de, R: BufRead> VariantAccess<'de> for Enum<'_, 'de, R> {
     }
 }
 
+// stream deserialize
+pub struct StreamDeserializer<'de, R, T>
+    where
+        R: BufRead,
+        T: de::Deserialize<'de>
+{
+    deserializer: SimpleDeserializer<'de, R>,
+    failed: bool,
+    output: PhantomData<T>,
+    lifetime: PhantomData<&'de ()>,
+}
+
+impl<'de, R, T> StreamDeserializer<'de, R, T>
+    where
+        R: BufRead,
+        T: de::Deserialize<'de>,
+{
+    pub fn new(deserializer: SimpleDeserializer<'de, R>) -> Self {
+        StreamDeserializer {
+            deserializer: deserializer,
+            failed: false,
+            output: PhantomData,
+            lifetime: PhantomData,
+        }
+    }
+}
+
+impl<'de, R, T> Iterator for StreamDeserializer<'de, R, T>
+where
+    R: BufRead,
+    T: de::Deserialize<'de>,
+{
+    type Item = Result<T>;
+
+    fn next(&mut self) -> Option<Result<T>> {
+        if self.failed {
+            return None;
+        }
+        let result = T::deserialize(&mut self.deserializer);
+        match result {
+            Ok(value) => {
+                return Some(Ok(value));
+            }
+            Err(_) => {
+                self.failed = true;
+                return None;
+            }
+        }
+    }
+}
+
 pub fn from_str<T>(s: &str) -> Result<T>
     where
         T: DeserializeOwned,
@@ -318,7 +383,7 @@ pub fn from_buf_reader<T, R>(reader: &mut R) -> Result<T>
         T: DeserializeOwned,
         R: BufRead,
 {
-    let mut deserializer = Deserializer::from_buf_reader(reader);
+    let mut deserializer = SimpleDeserializer::from_buf_reader(reader);
     let t = T::deserialize(&mut deserializer)?;
     Ok(t)
 }

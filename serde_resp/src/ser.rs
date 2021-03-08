@@ -3,6 +3,7 @@ use serde::{ser, Serialize, Serializer};
 use crate::error::{Error, Result};
 use std::io::Write;
 
+// TODO: not sure the writer should be buf writer or writer
 pub struct SimpleSerializer<W: Write> {
     // This string starts empty and JSON is appended as values are serialized.
     writer: W,

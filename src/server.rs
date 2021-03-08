@@ -1,6 +1,9 @@
 use crate::thread_pool::ThreadPool;
 use crate::{parse_request, KvsEngine, KvsError, Reply, Request, Result};
 use nix::unistd::close;
+use nom::Parser;
+use serde_json::Deserializer;
+use serde_resp::SimpleDeserializer;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
@@ -41,7 +44,7 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
                         let stream = s.into_tcp_stream();
                         let engine = self.engine.clone();
                         self.pool.spawn(move || {
-                            if let Err(e) = handle(engine, stream) {
+                            if let Err(e) = handle_serde(engine, stream) {
                                 error!("handle failed: {}", e);
                             }
                         })
@@ -70,8 +73,62 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
     }
 }
 
+// Option1: use serde_resp to process the stream
+fn handle_serde<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
+    let mut reader = BufReader::new(&stream);
+    let req_reader = SimpleDeserializer::from_buf_reader(&mut reader).into_iter::<Request>();
+    let mut writer = BufWriter::new(&stream);
+    for req in req_reader {
+        let req = req?;
+        debug!("Receive request from {:?}", req);
+        match req {
+            Request::Get { key } => match engine.get(key) {
+                Ok(res) => {
+                    if let Some(s) = res {
+                        writer.write_all(Reply::SingleLine(s).to_resp().as_ref())?;
+                    } else {
+                        writer.write_all(
+                            Reply::SingleLine("Key not found".to_string())
+                                .to_resp()
+                                .as_ref(),
+                        )?;
+                    }
+                    writer.flush()?;
+                }
+                Err(e) => {
+                    writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                    writer.flush()?;
+                }
+            },
+            Request::Set { key, value } => match engine.set(key, value) {
+                Ok(_) => {
+                    writer.write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+                    writer.flush()?;
+                    // println!("done: {:?}", key);
+                }
+                Err(e) => {
+                    writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                    writer.flush()?;
+                }
+            },
+            Request::Remove { key } => match engine.remove(key) {
+                Ok(_) => {
+                    writer.write_all(Reply::SingleLine("".to_string()).to_resp().as_ref())?;
+                    writer.flush()?;
+                }
+                Err(e) => {
+                    writer.write_all(Reply::Err(e.to_string()).to_resp().as_ref())?;
+                    writer.flush()?;
+                }
+            },
+        }
+    }
+    Ok(())
+}
+
 // TODO: the loop never loop?
-fn handle<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
+// Option2: use nom parser to process the stream.
+fn handle_norm<T: KvsEngine>(engine: T, stream: TcpStream) -> Result<()> {
     debug!("accept connection: {}", stream.peer_addr()?);
     let mut reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);

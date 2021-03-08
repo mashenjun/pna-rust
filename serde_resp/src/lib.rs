@@ -5,7 +5,7 @@ mod de;
 mod error;
 mod ser;
 
-pub use de::{Deserializer};
+pub use de::{SimpleDeserializer, from_buf_reader, from_str};
 pub use error::{Error, Result};
 pub use ser::{to_string, to_writer, SimpleSerializer};
 use std::fmt;
@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub enum Request {
+// internal use
+enum Request {
     Get { key: String },
     Set { key: String, value: String },
     Remove { key: String },
@@ -53,7 +54,8 @@ impl Request {
 
 // TODO: impl Serialize and Deserialize for Reply
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub enum Reply {
+// internal use
+enum Reply {
     SingleLine(String),
     Err(String),
     Int(i64),
@@ -91,14 +93,5 @@ impl Reply {
             Reply::Err(_) => true,
             Reply::Int(_) => true,
         }
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
