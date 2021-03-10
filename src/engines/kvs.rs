@@ -109,13 +109,10 @@ impl KvDB {
 
 #[allow(clippy::new_without_default)]
 impl KvsEngine for KvStore {
-    /// set write the given key value into log file and update the index map.
+    /// `set` append the given key value into log file and update the index map.
+    /// the content will be flush to disk immediately.
     fn set(&self, key: String, value: String) -> Result<()> {
         let mut db = self.db.write().unwrap();
-        // TODO: prototype
-        //       open the file defined by `path`, append string into file and close it;
-        //       insert key value to in hash mapKeyNotFoundError
-        //       no need to build a command again
         let cmd = Command::Set { key, value };
         let vec = serde_json::to_vec(&cmd)?;
         let buf = vec.as_ref();
@@ -123,7 +120,7 @@ impl KvsEngine for KvStore {
         // update the cursor
         db.file.flush()?;
         if let Command::Set { key, .. } = cmd {
-            let cursor = db.cursor; // TODO,
+            let cursor = db.cursor;
             if let Some(meta) = db.index.insert(key, Meta::new(cursor, buf.len() as u64)) {
                 db.dangling_bytes += meta.1;
             }

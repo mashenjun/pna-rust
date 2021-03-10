@@ -22,6 +22,9 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), Some(Protocol::tcp()))?;
         socket.set_reuse_address(true)?;
         socket.set_reuse_port(true)?;
+        // should no use SO_LINGER in server side in production
+        // however, we need to restart the server quickly in benchmark, which may consume all port
+        // resource. So we set SO_LINGER and let kernel drop the socket immediately.
         socket.set_linger(Some(Duration::new(0, 0)))?;
         Ok(KvsServer {
             engine,
@@ -61,6 +64,9 @@ impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
 
     pub fn shutdown(&self) -> Result<()> {
         self.close.store(true, atomic::Ordering::Relaxed);
+        // `shutdown` does not wake up `accept` on macos. So we close the socket directly。
+        // not sure if it will break the tcp closing part or not。
+        // Another option is to use select on channel.
         if cfg!(target_os = "macos") {
             close(self.socket.as_raw_fd())?;
         } else {

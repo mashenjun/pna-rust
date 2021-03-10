@@ -56,7 +56,7 @@ impl SharedQueueThreadPool {
 
 fn execute(rx: Receiver<Message>) {
     // Option1: check thread::panicking() in some deconstruct or defer point, if the current thread
-    // is in panicking state, spawn a new thread and let the current on exit.
+    // is in panicking state, spawn a new thread and let the current one exit.
     // Option2: use catch_unwind to catch the panic, and continue use the current thread.
 
     defer! {

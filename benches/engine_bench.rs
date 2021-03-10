@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::{BatchSize, Criterion, ParameterizedBenchmark};
+use criterion::{BatchSize, Benchmark, Criterion, ParameterizedBenchmark};
 use kvs::{KvStore, KvsEngine, SledKvsEngine};
 use rand::prelude::*;
 use sled::open;
@@ -9,9 +9,9 @@ use std::iter;
 use tempfile::TempDir;
 
 fn set_bench(c: &mut Criterion) {
-    let bench = ParameterizedBenchmark::new(
+    let bench = Benchmark::new(
         "kvs",
-        |b, _| {
+        |b| {
             b.iter_batched(
                 || {
                     let temp_dir = TempDir::new().unwrap();
@@ -25,9 +25,9 @@ fn set_bench(c: &mut Criterion) {
                 BatchSize::SmallInput,
             )
         },
-        iter::once(()),
+        // iter::once(()),
     )
-    .with_function("sled", |b, _| {
+    .with_function("sled", |b| {
         b.iter_batched(
             || {
                 let temp_dir = TempDir::new().unwrap();

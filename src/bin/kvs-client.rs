@@ -60,7 +60,7 @@ enum Command {
 
 impl Command {
     pub fn to_request(&self) -> (Request, SocketAddr) {
-            match self {
+        match self {
             Command::Get { key, addr } => (
                 Request::Get {
                     key: key.to_string(),

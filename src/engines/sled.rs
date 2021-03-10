@@ -23,7 +23,7 @@ impl SledKvsEngine {
 impl KvsEngine for SledKvsEngine {
     fn set(&self, key: String, value: String) -> Result<()> {
         self.db.insert(key, value.into_bytes())?;
-        self.db.flush()?;
+        // self.db.flush()?;
         Ok(())
     }
 
@@ -41,7 +41,7 @@ impl KvsEngine for SledKvsEngine {
 
     fn remove(&self, key: String) -> Result<()> {
         self.db.remove(key)?.ok_or(KvsError::KeyNotFoundError)?;
-        self.db.flush()?;
+        // self.db.flush()?;
         Ok(())
     }
 }
