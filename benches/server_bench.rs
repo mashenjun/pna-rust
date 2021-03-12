@@ -301,7 +301,7 @@ fn setup_get_workload() -> (Sender<i32>, Receiver<i32>, Vec<JoinHandle<()>>) {
     let (sender_job, receiver_job) = bounded::<i32>(num_cpus::get());
     let (sender_done, receiver_done) = unbounded::<i32>();
     let mut handlers = Vec::new();
-    for _ in 0..iter_size {
+    for _ in 0..num_cpus::get() {
         let rx = receiver_job.clone();
         let sx = sender_done.clone();
         let handle = thread::spawn(move || {

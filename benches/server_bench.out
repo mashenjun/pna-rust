@@ -1,0 +1,197 @@
+// benchmark for write_queued_kvstore
+write_queued_kvstore/1  time:   [93.656 ms 98.121 ms 102.59 ms]
+                        change: [-2.3735% +3.3464% +9.1535%] (p = 0.27 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+write_queued_kvstore/2  time:   [91.135 ms 94.299 ms 97.889 ms]
+                        change: [+0.8655% +7.1961% +13.762%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Found 6 outliers among 100 measurements (6.00%)
+  6 (6.00%) high mild
+write_queued_kvstore/4  time:   [89.215 ms 92.728 ms 96.324 ms]
+                        change: [-16.997% -11.922% -6.7112%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+write_queued_kvstore/6  time:   [88.591 ms 90.909 ms 93.413 ms]
+                        change: [-21.138% -16.475% -11.550%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+write_queued_kvstore/8  time:   [93.271 ms 96.679 ms 100.32 ms]
+                        change: [-13.163% -7.3217% -1.4132%] (p = 0.02 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high mild
+write_queued_kvstore/10 time:   [92.496 ms 95.595 ms 98.759 ms]
+                        change: [-4.0000% +0.9363% +6.2710%] (p = 0.73 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+write_queued_kvstore/12 time:   [93.274 ms 96.353 ms 99.571 ms]
+                        change: [+0.1618% +5.2986% +10.637%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+write_queued_kvstore/14 time:   [89.673 ms 92.151 ms 94.753 ms]
+                        change: [-8.9980% -4.0472% +0.8355%] (p = 0.12 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+
+// benchmark for write_rayon_kvstore
+write_rayon_kvstore/1   time:   [96.566 ms 99.692 ms 103.08 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+write_rayon_kvstore/2   time:   [90.841 ms 93.662 ms 96.429 ms]
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+write_rayon_kvstore/4   time:   [92.242 ms 94.828 ms 97.586 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+write_rayon_kvstore/6   time:   [110.29 ms 114.92 ms 119.59 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+write_rayon_kvstore/8   time:   [113.76 ms 118.86 ms 124.23 ms]
+write_rayon_kvstore/10  time:   [109.30 ms 113.37 ms 117.51 ms]
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+write_rayon_kvstore/12  time:   [96.788 ms 99.960 ms 103.36 ms]
+Found 6 outliers among 100 measurements (6.00%)
+  6 (6.00%) high mild
+write_rayon_kvstore/14  time:   [106.71 ms 112.42 ms 118.29 ms]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+// benchmark for write_rayon_sledkvengine
+write_rayon_sledkvengine/1
+                        time:   [116.56 ms 120.62 ms 124.88 ms]
+write_rayon_sledkvengine/2
+                        time:   [116.40 ms 121.25 ms 126.72 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+write_rayon_sledkvengine/4
+                        time:   [118.01 ms 122.54 ms 127.28 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+write_rayon_sledkvengine/6
+                        time:   [124.35 ms 129.57 ms 135.33 ms]
+write_rayon_sledkvengine/8
+                        time:   [109.16 ms 113.04 ms 117.26 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+write_rayon_sledkvengine/10
+                        time:   [114.70 ms 120.48 ms 126.38 ms]
+Found 7 outliers among 100 measurements (7.00%)
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+write_rayon_sledkvengine/12
+                        time:   [127.19 ms 133.40 ms 139.68 ms]
+write_rayon_sledkvengine/14
+                        time:   [126.89 ms 133.04 ms 139.47 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+
+// benchmark for read_queued_kvstore
+read_queued_kvstore/1   time:   [102.16 ms 106.44 ms 110.92 ms]
+Found 6 outliers among 100 measurements (6.00%)
+  6 (6.00%) high mild
+read_queued_kvstore/2   time:   [88.591 ms 90.986 ms 93.354 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+read_queued_kvstore/4   time:   [88.207 ms 90.885 ms 93.594 ms]
+read_queued_kvstore/6   time:   [92.217 ms 95.571 ms 99.202 ms]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+read_queued_kvstore/8   time:   [87.806 ms 90.675 ms 93.705 ms]
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high mild
+read_queued_kvstore/10  time:   [83.203 ms 85.122 ms 87.131 ms]
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+read_queued_kvstore/12  time:   [89.650 ms 94.348 ms 99.339 ms]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+read_queued_kvstore/14  time:   [97.990 ms 101.91 ms 105.92 ms]
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high mild
+
+// benchmark for read_rayon_kvstore
+Benchmarking read_rayon_kvstore/1: Collecting 100 samples in estimated 343.58 s (5050 it                                                                                        read_rayon_kvstore/1    time:   [100.14 ms 105.00 ms 110.00 ms]
+                        change: [-33.540% -29.985% -26.207%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking read_rayon_kvstore/2: Collecting 100 samples in estimated 690.98 s (5050 it                                                                                        read_rayon_kvstore/2    time:   [108.15 ms 113.78 ms 119.91 ms]
+                        change: [-19.832% -14.651% -8.3339%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking read_rayon_kvstore/4: Collecting 100 samples in estimated 527.05 s (5050 it                                                                                        read_rayon_kvstore/4    time:   [95.646 ms 99.075 ms 102.62 ms]
+                        change: [-27.317% -22.626% -17.951%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  7 (7.00%) high mild
+Benchmarking read_rayon_kvstore/6: Collecting 100 samples in estimated 546.71 s (5050 it                                                                                        read_rayon_kvstore/6    time:   [126.76 ms 138.86 ms 149.63 ms]
+                        change: [-20.706% -13.876% -6.7558%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Benchmarking read_rayon_kvstore/8: Collecting 100 samples in estimated 850.51 s (5050 it                                                                                        read_rayon_kvstore/8    time:   [137.69 ms 143.49 ms 149.45 ms]
+                        change: [+11.708% +19.098% +27.117%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking read_rayon_kvstore/10: Collecting 100 samples in estimated 1202.6 s (5050 i                                                                                        read_rayon_kvstore/10   time:   [128.66 ms 136.66 ms 144.74 ms]
+                        change: [+6.0872% +13.322% +21.509%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking read_rayon_kvstore/12: Collecting 100 samples in estimated 1290.2 s (5050 i                                                                                        read_rayon_kvstore/12   time:   [171.47 ms 212.33 ms 255.55 ms]
+                        change: [+10.161% +25.219% +41.600%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+Benchmarking read_rayon_kvstore/14: Collecting 100 samples in estimated 1355.8 s (5050 i                                                                                        read_rayon_kvstore/14   time:   [182.88 ms 186.17 ms 189.43 ms]
+                        change: [+26.408% +33.828% +41.795%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+// benchmark for read_rayon_sledkvengine
+Benchmarking read_rayon_sledkvengine/1: Collecting 100 samples in estimated 390.50 s (50                                                                                        read_rayon_sledkvengine/1
+                        time:   [96.656 ms 100.32 ms 103.82 ms]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking read_rayon_sledkvengine/2: Collecting 100 samples in estimated 1228.9 s (50                                                                                        read_rayon_sledkvengine/2
+                        time:   [97.827 ms 102.01 ms 106.35 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking read_rayon_sledkvengine/4: Collecting 100 samples in estimated 1015.7 s (50                                                                                        read_rayon_sledkvengine/4
+                        time:   [106.04 ms 109.92 ms 113.84 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+read_rayon_sledkvengine/6
+                        time:   [120.00 ms 128.39 ms 137.29 ms]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+read_rayon_sledkvengine/8
+                        time:   [105.39 ms 109.53 ms 113.52 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+read_rayon_sledkvengine/10
+                        time:   [107.13 ms 110.69 ms 114.30 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+read_rayon_sledkvengine/12
+                        time:   [105.94 ms 109.32 ms 112.91 ms]
+Found 6 outliers among 100 measurements (6.00%)
+  6 (6.00%) high mild
+read_rayon_sledkvengine/14
+                        time:   [100.83 ms 104.72 ms 108.75 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
