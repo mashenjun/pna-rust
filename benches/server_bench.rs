@@ -15,7 +15,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use tempfile::TempDir;
 
-const iter_size: i32 = 100;
+const ITER_SIZE: i32 = 100;
 
 fn write_queued_kvstore(c: &mut Criterion) {
     let inputs = gen_thread_cnt();
@@ -38,7 +38,7 @@ fn write_queued_kvstore(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_set_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -65,7 +65,7 @@ fn read_queued_kvstore(c: &mut Criterion) {
             let temp_dir = TempDir::new().unwrap();
             let pool = thread_pool::SharedQueueThreadPool::new(num).unwrap();
             let engine = KvStore::open(temp_dir.path()).unwrap();
-            for i in 0..iter_size {
+            for i in 0..ITER_SIZE {
                 let key = format!("key{:0>3}", i);
                 let value = key.clone();
                 engine.set(key, value).unwrap();
@@ -84,7 +84,7 @@ fn read_queued_kvstore(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_get_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -123,7 +123,7 @@ fn write_rayon_kvstore(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_set_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -150,7 +150,7 @@ fn read_rayon_kvstore(c: &mut Criterion) {
             let temp_dir = TempDir::new().unwrap();
             let pool = thread_pool::RayonThreadPool::new(num).unwrap();
             let engine = KvStore::open(temp_dir.path()).unwrap();
-            for i in 0..iter_size {
+            for i in 0..ITER_SIZE {
                 let key = format!("key{:0>3}", i);
                 let value = key.clone();
                 engine.set(key, value).unwrap();
@@ -169,7 +169,7 @@ fn read_rayon_kvstore(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_get_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -209,7 +209,7 @@ fn write_rayon_sledkvengine(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_set_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -236,7 +236,7 @@ fn read_rayon_sledkvengine(c: &mut Criterion) {
             let temp_dir = TempDir::new().unwrap();
             let pool = thread_pool::RayonThreadPool::new(num).unwrap();
             let engine = SledKvsEngine::open(temp_dir.path()).unwrap();
-            for i in 0..iter_size {
+            for i in 0..ITER_SIZE {
                 let key = format!("key{:0>3}", i);
                 let value = key.clone();
                 engine.set(key, value).unwrap();
@@ -255,7 +255,7 @@ fn read_rayon_sledkvengine(c: &mut Criterion) {
             let (sender, receiver, mut handlers) = setup_get_workload();
             let sx = sender.clone();
             b.iter(move || {
-                for i in 0..iter_size {
+                for i in 0..ITER_SIZE {
                     sx.send(i).unwrap()
                 }
                 receiver.recv().unwrap();
@@ -326,7 +326,7 @@ fn execute_set(rx: Receiver<i32>, sx: Sender<i32>) {
                     .assert()
                     .success()
                     .stdout(is_empty());
-                if id >= iter_size - 1 {
+                if id >= ITER_SIZE - 1 {
                     sx.send(id).unwrap();
                 }
             }
@@ -352,7 +352,7 @@ fn execute_get(rx: Receiver<i32>, sx: Sender<i32>) {
                     .assert()
                     .success()
                     .stdout(value);
-                if id >= iter_size - 1 {
+                if id >= ITER_SIZE - 1 {
                     sx.send(id).unwrap();
                 }
             }
