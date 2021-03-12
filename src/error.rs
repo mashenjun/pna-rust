@@ -15,41 +15,48 @@ pub enum KvsError {
     SledError(sled::Error),
     RayonError(rayon::ThreadPoolBuildError),
     NixError(nix::Error),
+    SerdeRespError(serde_resp::Error),
 }
 
 impl From<io::Error> for KvsError {
     fn from(err: io::Error) -> Self {
-        KvsError::IOError(err)
+        Self::IOError(err)
     }
 }
 
 impl From<serde_json::Error> for KvsError {
     fn from(err: serde_json::Error) -> Self {
-        KvsError::SerdeJsonError(err)
+        Self::SerdeJsonError(err)
     }
 }
 
 impl From<Utf8Error> for KvsError {
     fn from(err: Utf8Error) -> Self {
-        KvsError::Utf8Error(err)
+        Self::Utf8Error(err)
     }
 }
 
 impl From<sled::Error> for KvsError {
     fn from(err: sled::Error) -> Self {
-        KvsError::SledError(err)
+        Self::SledError(err)
     }
 }
 
 impl From<rayon::ThreadPoolBuildError> for KvsError {
     fn from(err: ThreadPoolBuildError) -> Self {
-        KvsError::RayonError(err)
+        Self::RayonError(err)
     }
 }
 
 impl From<nix::Error> for KvsError {
     fn from(err: nix::Error) -> Self {
-        KvsError::NixError(err)
+        Self::NixError(err)
+    }
+}
+
+impl From<serde_resp::Error> for KvsError {
+    fn from(err: serde_resp::Error) -> Self {
+        Self::SerdeRespError(err)
     }
 }
 
@@ -79,6 +86,9 @@ impl Display for KvsError {
             }
             KvsError::NixError(e) => {
                 write!(f, "Nix error: {}", e)
+            }
+            KvsError::SerdeRespError(e) => {
+                write!(f, "Serde resp error: {}", e)
             }
         }
     }

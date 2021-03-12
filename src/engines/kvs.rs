@@ -11,7 +11,7 @@ use std::fmt::{self, Display};
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 const COMPACT_THRESHOLD_BYTES: u64 = 1024 * 1024;
@@ -75,13 +75,12 @@ impl KvStore {
 }
 
 impl KvDB {
-    fn compact(&mut self, path: &PathBuf) -> Result<()> {
+    fn compact(&mut self, path: &Path) -> Result<()> {
         // nothing can do on a PoisonError
         if self.dangling_bytes <= COMPACT_THRESHOLD_BYTES {
             return Ok(());
         }
         // do real compaction
-        // let mut reader = self.reader.lock().unwrap();
         let compact_path = compact_path(path);
         let mut compact_file: File = open_for_append(&compact_path)?;
         compact_file.seek(SeekFrom::Start(0))?;
@@ -110,27 +109,24 @@ impl KvDB {
 
 #[allow(clippy::new_without_default)]
 impl KvsEngine for KvStore {
-    /// set write the given key value into log file and update the index map.
+    /// `set` append the given key value into log file and update the index map.
+    /// the content will be flush to disk immediately.
     fn set(&self, key: String, value: String) -> Result<()> {
         let mut db = self.db.write().unwrap();
-        // TODO: prototype
-        //       open the file defined by `path`, append string into file and close it;
-        //       insert key value to in hash mapKeyNotFoundError
-        //       no need to build a command again
         let cmd = Command::Set { key, value };
         let vec = serde_json::to_vec(&cmd)?;
         let buf = vec.as_ref();
-        db.file.write(buf)?;
+        db.file.write_all(buf)?;
         // update the cursor
         db.file.flush()?;
         if let Command::Set { key, .. } = cmd {
-            let cursor = db.cursor; // TODO,
+            let cursor = db.cursor;
             if let Some(meta) = db.index.insert(key, Meta::new(cursor, buf.len() as u64)) {
                 db.dangling_bytes += meta.1;
             }
         };
         db.cursor += buf.len() as u64;
-        db.compact(self.path.as_ref())?;
+        db.compact(self.path.as_path())?;
         Ok(())
     }
 
@@ -169,15 +165,15 @@ impl KvsEngine for KvStore {
     }
 }
 
-fn data_path(path: &PathBuf) -> PathBuf {
+fn data_path(path: &Path) -> PathBuf {
     path.join("data")
 }
 
-fn compact_path(path: &PathBuf) -> PathBuf {
+fn compact_path(path: &Path) -> PathBuf {
     path.join("data.compact")
 }
 
-fn open_for_read(path: &PathBuf, pos: u64) -> Result<File> {
+fn open_for_read(path: &Path, pos: u64) -> Result<File> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -187,7 +183,7 @@ fn open_for_read(path: &PathBuf, pos: u64) -> Result<File> {
     Ok(file)
 }
 
-fn open_for_append(path: &PathBuf) -> Result<File> {
+fn open_for_append(path: &Path) -> Result<File> {
     let file = OpenOptions::new()
         .write(true)
         .create(true)

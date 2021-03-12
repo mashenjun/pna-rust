@@ -1,0 +1,47 @@
+// benchmark for set
+set_bench/kvs           time:   [15.063 ms 15.100 ms 15.146 ms]
+                        change: [+9.4553% +10.082% +10.804%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 13 outliers among 100 measurements (13.00%)
+  7 (7.00%) high mild
+  6 (6.00%) high severe
+set_bench/sled          time:   [73.887 ms 74.608 ms 75.311 ms]
+                        change: [+54.665% +59.310% +63.732%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+// benchmark for get
+get_bench/kvs/8         time:   [1.3195 us 1.3528 us 1.3956 us]
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+get_bench/kvs/12        time:   [1.3371 us 1.3454 us 1.3543 us]
+Found 9 outliers among 100 measurements (9.00%)
+  4 (4.00%) high mild
+  5 (5.00%) high severe
+get_bench/kvs/16        time:   [1.8673 us 1.9006 us 1.9366 us]
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+get_bench/kvs/20        time:   [2.3304 us 2.4381 us 2.5912 us]
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+get_bench/sled/8        time:   [638.84 ns 647.00 ns 656.49 ns]
+Found 12 outliers among 100 measurements (12.00%)
+  6 (6.00%) high mild
+  6 (6.00%) high severe
+get_bench/sled/12       time:   [886.38 ns 910.62 ns 938.84 ns]
+Found 10 outliers among 100 measurements (10.00%)
+  1 (1.00%) low mild
+  6 (6.00%) high mild
+  3 (3.00%) high severe
+get_bench/sled/16       time:   [2.6246 us 2.8446 us 3.0796 us]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+get_bench/sled/20       time:   [4.7440 us 5.0924 us 5.4716 us]
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe

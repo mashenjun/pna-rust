@@ -73,7 +73,7 @@ fn run(srv: &mut Server) -> Result<()> {
                 .open(KVS_ENGINE_FILE)?;
             let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
             let storage = KvsServer::new(KvStore::open(current_dir()?)?, pool)?;
-            return storage.run(srv.addr);
+            storage.run(srv.addr)
         }
         EngineOpt::sled => {
             OpenOptions::new()
@@ -82,7 +82,7 @@ fn run(srv: &mut Server) -> Result<()> {
                 .open(SLED_ENGINE_FILE)?;
             let pool = SharedQueueThreadPool::new(num_cpus::get() as u32)?;
             let storage = KvsServer::new(SledKvsEngine::open(current_dir()?)?, pool)?;
-            return storage.run(srv.addr);
+            storage.run(srv.addr)
         }
     }
 }
