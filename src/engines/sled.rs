@@ -45,3 +45,11 @@ impl KvsEngine for SledKvsEngine {
         Ok(())
     }
 }
+
+impl Drop for SledKvsEngine {
+    fn drop(&mut self) {
+        if let Err(e) = self.db.flush() {
+            eprintln!("{:?}", e);
+        }
+    }
+}
