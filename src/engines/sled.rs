@@ -24,7 +24,7 @@ impl KvsEngine for SledKvsEngine {
     fn set(&self, key: String, value: String) -> Result<()> {
         self.db.insert(key, value.into_bytes())?;
         // flush in every set opt will make the opt too slow.
-        // self.db.flush()?;
+        self.db.flush()?;
         Ok(())
     }
 
@@ -43,16 +43,7 @@ impl KvsEngine for SledKvsEngine {
     fn remove(&self, key: String) -> Result<()> {
         self.db.remove(key)?.ok_or(KvsError::KeyNotFoundError)?;
         // flush in every remove opt will make the opt too slow.
-        // self.db.flush()?;
+        self.db.flush()?;
         Ok(())
-    }
-}
-
-// It may not be the best place to flush memory to disk.
-impl Drop for SledKvsEngine {
-    fn drop(&mut self) {
-        if let Err(e) = self.db.flush() {
-            eprintln!("{:?}", e);
-        }
     }
 }
