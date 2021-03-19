@@ -287,6 +287,7 @@ impl IndexReader {
             // fetch kv form disk using the meta
             let mut buf = vec![0u8; meta.1 as usize];
             // the read_exact_at call pread under the hood.
+            // TODO: what is the safety here?
             let reader = unsafe {
                 self.reader.as_ptr().as_ref().ok_or(io::Error::new(io::ErrorKind::NotFound, "broken file in atomic cell"))
             };
@@ -304,6 +305,7 @@ impl IndexReader {
 
     pub fn reopen(&self)->Result<()> {
         let reader = open_for_read(data_path( self.dir.as_path()).as_path(), 0)?;
+        // calling store will drop the old reader.
         self.reader.store(reader);
         Ok(())
     }
@@ -331,7 +333,7 @@ impl Clone for LeftRight {
 
 impl LeftRight{
     fn get(&self, key: String) -> Result<Option<String>> {
-        return match self.cnt.load(Ordering::Relaxed) {
+        return match self.cnt.load(Ordering::Acquire) {
             0 => {
                 self.left.get(key)
             }
@@ -345,7 +347,7 @@ impl LeftRight{
     }
 
     fn compact_index(&self) -> Arc<SkipMap<String, Meta>> {
-        return match self.cnt.load(Ordering::Relaxed) {
+        return match self.cnt.load(Ordering::Acquire) {
             0 => {
                 self.right.get_index()
             },
@@ -357,16 +359,16 @@ impl LeftRight{
             }
         }
     }
-    //` compact_reopen` must call after the compact_index updated
+    // `compact_reopen` must call after the compact_index updated
     fn compact_reopen(&self) -> Result<()>  {
-       match self.cnt.load(Ordering::Relaxed) {
+       match self.cnt.load(Ordering::Acquire) {
            0 => {
                self.right.reopen()?;
-               self.cnt.store(1, Ordering::Relaxed);
+               self.cnt.store(1, Ordering::Release);
            },
            1 => {
                self.left.reopen()?;
-               self.cnt.store(0, Ordering::Relaxed);
+               self.cnt.store(0, Ordering::Release);
            }
            _ => {
                unreachable!()
